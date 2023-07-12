@@ -1,0 +1,18 @@
+sect1:
+  attr1: abc
+  attr2: 1
+  sub1:
+    attr3: True
+    attr4: [a, b, c]
+sect2:
+  attr5: 1.0
+  attr6: ${.sect1.attr1}
+sect3:
+  attr7: [x, y, z]
+sect4:
+  - attr8: jkl
+    attr9: 0
+    attr10: True
+  - attr8: mno
+    attr9: 1
+    attr10: False

@@ -1,0 +1,19 @@
+# Lawful  = All definitions
+# Chaotic = Minimal required
+# Good    = Common/valid use cases
+# Evil    = Less common/invalid use cases
+definitions:
+  file:
+    .desc:
+    .type: str
+    .required: True
+  year:
+    .desc:
+    .type: int
+    .default: 2000
+  run:
+    -
+
+run1:
+  file: /abc/def.gh
+  year:

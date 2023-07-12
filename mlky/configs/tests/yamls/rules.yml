@@ -1,0 +1,71 @@
+sect1:
+  .desc: Section 1
+  .required: True
+  .children:
+    attr1:
+      .type: str
+      .desc: Description of sect1.attr1
+      .required: True
+    attr2:
+      .type: int
+      .desc: Description of sect1.attr2
+      .required: False
+    sub1:
+      .desc: Subsection 1 of sect1
+      .required: False
+      .children:
+        attr3:
+          .type: bool
+          .desc: Description of sect1.sub1.attr3
+        attr4:
+          .type: list
+          .desc: Description of sect1.sub1.attr4
+sect2:
+  .desc: Section 2
+  .required: False
+  .children:
+    attr5:
+      .type: float
+      .desc: Description of sect2.attr5
+      .required: True
+    attr6:
+      .type: str
+      .desc: Description of sect2.attr6
+      .required: False
+sect3:
+  .desc: Section 3
+  .required: True
+  .children:
+    attr7:
+      .type: list
+      .desc: Description of sect3.attr7
+      .required: True
+      .default: [0, 1]
+sect4:
+  .desc: Section 4
+  .required: False
+  .type: list
+  .children:
+    attr8:
+      .type: str
+      .desc: Description of sect4[*].attr8
+    attr9:
+      .type: int
+      .desc: Description of sect4[*].attr9
+    attr10:
+      .type: bool
+      .desc: Description of sect4[*].attr10
+sect5:
+  .desc: Missing list section
+  .required: False
+  .type: list
+  .number: 3
+  .children:
+    attr11:
+      .type: str
+      .desc: Description of sect5[*].attr11
+      .default: abc
+    attr12:
+      .type: int
+      .desc: Description of sect5[*].attr12
+      .default: 0

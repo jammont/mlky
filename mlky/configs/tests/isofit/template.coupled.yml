@@ -1,0 +1,177 @@
+# mlky uses special syntax ${?key} to perform value replacement operations at runtime:
+#   ${.key} - Replace this ${} in the string with the value at config[key]
+#   ${$key} - Replace this ${} in the string with the environment variable `key`
+#   ${?key} - Replace this ${} in the string with the str(return) from function `key` in the registered functions
+#   ${!key} - Replace this value with the return from function `key` in the registered functions
+#
+# Comment keys:
+#   * = This key is required to be manually set
+#   + = This is an optional key under a required section
+#   S = Script level section
+#
+# Usage: --config [this file].yml --inherit default(<-[section])+
+
+# ? | Type | Default options across all scripts
+default:
+  # * | str | TODO
+  isofit_root: /users/jamesmo/isofit
+  # * | str | TODO
+  working_dir: ${.isofit_root}/examples/profiling_cube
+  # * |  | TODO
+  forward_model:
+    # + | str | Points to an numpy-format covariance matrix
+    model_discrepancy_file: ${!null}
+    # * |  | Instrument config section
+    instrument:
+      # + | int | TODO
+      integrations: 1
+      # + | str | TODO
+      parametric_noise_file: ${.isofit_root}/data/avirisng_noise.txt
+      # + |  | TODO
+      unknowns:
+        #   | float | TODO
+        uncorrelated_radiometric_uncertainty: 0.01
+      # + | str | TODO
+      wavelength_file: ${.isofit_root}/data/wavelengths.txt
+    # * |  | Radiative transfer config section
+    radiative_transfer:
+      # + | str | TODO
+      interpolator_style: mlg
+      # + | bool | TODO
+      overwrite_interpolator: True
+      # + |  | TODO
+      lut_grid:
+        #   | list | TODO
+        AOT550: [0.001, 0.2505, 0.5]
+        #   | list | TODO
+        H2OSTR: [1.04, 1.2875]
+        #   | list | TODO
+        GNDALT: [0.001, 0.5, 1]
+        #   | list | TODO
+        OBSZEN: [160, 170]
+        #   | list | TODO
+        TRUEAZ: [70, 75]
+      # + |  | TODO
+      radiative_transfer_engines:
+        #   |  | TODO
+        vswir:
+          #   | str | TODO
+          aerosol_model_file: ${.isofit_root}/data/aerosol_model.txt
+          #   | str | TODO
+          aerosol_template_file: ${.isofit_root}/data/aerosol_template.json
+          #   | str | TODO
+          earth_sun_distance_file: ${.isofit_root}/data/earth_sun_distance.txt
+          # * | str | TODO
+          emulator_aux_file: ${$EMULATOR}/sRTMnet_v100_aux.npz
+          # * | str | TODO
+          emulator_file: ${$EMULATOR}/sRTMnet_v100
+          # * | str | TODO
+          engine_base_dir: ${$ENGINE}
+          # * | str | TODO
+          engine_name: sRTMnet
+          #   | str | TODO
+          interpolator_base_path: ${.working_dir}/lut_full/emulatordim_-2_slice_0_vi
+          #   | str | TODO
+          irradiance_file: ${.isofit_root}/examples/20151026_SantaMonica/data/prism_optimized_irr.dat
+          #   | list | TODO
+          lut_names: ['H2OSTR', 'AOT550', 'GNDALT', 'OBSZEN', 'TRUEAZ']
+          #   | str | TODO
+          lut_path: ${.working_dir}/lut_full
+          #   | list | TODO
+          statevector_names: ['H2OSTR', 'AOT550']
+          #   | str | TODO
+          template_file: ${.working_dir}/ang20170323t202244_modtran_tpl.json
+      # + |  | TODO
+      statevector:
+        #   |  | TODO
+        AOT550:
+          #   | list | TODO
+          bounds: [0.001, 0.5]
+          #   | float | TODO
+          init: 0.0509
+          #   | float | TODO
+          prior_mean: 0.0509
+          #   | float | TODO
+          prior_sigma: 10.0
+          #   | int, float | TODO
+          scale: 1
+        #   |  | TODO
+        H2OSTR:
+          #   | list | TODO
+          bounds: [1.04, 1.2875]
+          #   | float | TODO
+          init: 1.287
+          #   | float | TODO
+          prior_mean: 1.287
+          #   | float | TODO
+          prior_sigma: 100.0
+          #   | int, float | TODO
+          scale: 1
+      # + |  | TODO
+      unknowns:
+        #   | float | TODO
+        H2O_ABSCO: 0.0
+    # + |  | Surface config section
+    surface:
+      #   | bool | TODO
+      select_on_init: True
+      #   | str | TODO
+      surface_category: multicomponent_surface
+      #   | str | TODO
+      surface_file: ${.working_dir}/data/surface.mat
+  #   |  | TODO
+  implementation:
+    #   | str | Defines the operating mode for isofit
+    mode: inversion
+    #   | int | Submit task_inflation_factor*n_cores number of tasks
+    task_inflation_factor: 10
+    #   | bool | Indicates that code should terminate as soon as all radiative transfer engine configuration files are written (without running them)
+    rte_configure_and_exit: False
+    #   | bool | Flag indicating whether radiative transfer engines should automatically rebuild
+    rte_auto_rebuild: True
+    #   | int | Integer indicating how large (how many spectra) of chunks to read/process/write. A buffer size of 1 means pixels are processed independently. Large buffers can help prevent IO choke points, especially if the
+    io_buffer_size: 100
+    #   | int | The maximum size of inversion hash tables.  Can provide speedups with redundant surfaces, but comes with increased memory costs
+    max_hash_table_size: 50
+    #   | dict | Optional config for running in inversion mode
+    inversion:
+      #   | list | TODO
+      windows: [[380.0, 1340.0], [1450.0, 1800.0], [1970.0, 2500.0]]
+    #   | int | Number of cores to use
+    n_cores: -1
+    #   | str | Ray IP-head (for multi-node runs)
+    ip_head: null
+    #   | str | Ray Redis-password (for multi-node runs)
+    redis_password: null
+    #   | bool | To include the Ray dashboard or not
+    ray_include_dashboard: False
+    #   | bool | Informs Ray to ignore re-initilaization.  Can be convenient for multiple Isofit instances
+    ray_ignore_reinit_error: True
+    #   | str | Overrides the standard ray temporary directory. Useful for multiuser systems
+    ray_temp_dir: /tmp/ray
+  # * |  | Input file(s) configuration
+  input:
+    # * | str | Input radiance file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Used for inverse-modeling (radiance -> reflectance)
+    measured_radiance_file: null
+    # + | str | Input reference reflectance (to be compared against) file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Used for radiometric calibration
+    reference_reflectance_file: null
+    # + | str | Input reflectance file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Used for forward-modeling (reflectance -> radiance)
+    reflectance_file: null
+    # * | str | Input 'obs', or observation, file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Provides information about the conditions during observaiton.  Assumed to be in the band-wise format: {path length, to-sensor azimuth, to-sensor zenith, to-sun azimuth, to-sun zenith, phase, slope, aspect, cosine i, UTC time}
+    obs_file: null
+    # + | str | Input glt file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Provides (x,y) offset information for the spatial location of raw-space input files
+    glt_file: null
+    # * | str | Input 'loc', or location, file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Provides per-pixel lat, long, and elevation information
+    loc_file: null
+    # + | str | Background reflectance file used for spatial inference. Should be an ENVI formatted binary cube that is the same dimensions as the input data cube
+    background_reflectance_file: null
+    # + | str | Input radiometric correction file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Used to make minor channelized corrections to account for slight systematic errors not captured in calibration
+    radiometry_correction_file: null
+  # * |  | TODO
+  output:
+    # * | str | TODO
+    estimated_reflectance_file: ${.working_dir}/output/ang20170323t202244_rfl
+    # * | str | TODO
+    estimated_state_file: ${.working_dir}/output/ang20170323t202244_state
+    # * | str | TODO
+    posterior_uncertainty_file: ${.working_dir}/output/ang20170323t202244_uncert

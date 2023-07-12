@@ -1,0 +1,31 @@
+Default:
+  # Required | Section 1
+  sect1:
+    # Required | str | Description of sect1.attr1
+    attr1: str
+    # Optional | int | Description of sect1.attr2
+    attr2: int
+    # Optional | Subsection 1 of sect1
+    sub1:
+      # Optional | bool | Description of sect1.sub1.attr3
+      attr3: bool
+      # Optional | list | Description of sect1.sub1.attr4
+      attr4: list
+  # Optional | Section 2
+  sect2:
+    # Required | float | Description of sect2.attr5
+    attr5: float
+    # Optional | str | Description of sect2.attr6
+    attr6: str
+  # Required | Section 3
+  sect3:
+    # Required | list | Description of sect3.attr7
+    attr7: list
+  # Optional | list | Section 4
+  sect4:
+    - # Optional | str | Description of sect4[*].attr8
+      attr8: str
+      # Optional | int | Description of sect4[*].attr9
+      attr9: int
+      # Optional | bool | Description of sect4[*].attr10
+      attr10: bool

@@ -1,0 +1,95 @@
+# mlky uses special syntax ${?key} to perform value replacement operations at runtime:
+#   ${.key} - Replace this ${} in the string with the value at config[key]
+#   ${$key} - Replace this ${} in the string with the environment variable `key`
+#   ${?key} - Replace this ${} in the string with the str(return) from function `key` in the registered functions
+#   ${!key} - Replace this value with the return from function `key` in the registered functions
+#
+# Comment keys:
+#   * = This key is required to be manually set
+#   + = This is an optional key under a required section
+#   S = Script level section
+#
+# Usage: --config [this file].yml --inherit default(<-[section])+
+
+default:
+  isofit_root: /users/jamesmo/isofit
+  working_dir: ${.isofit_root}/examples/profiling_cube
+  forward_model:
+    model_discrepancy_file: ${!null}
+    instrument:
+      integrations: 1
+      parametric_noise_file: ${.isofit_root}/data/avirisng_noise.txt
+      unknowns:
+        uncorrelated_radiometric_uncertainty: 0.01
+      wavelength_file: ${.isofit_root}/data/wavelengths.txt
+    radiative_transfer:
+      interpolator_style: mlg
+      overwrite_interpolator: True
+      lut_grid:
+        AOT550: [0.001, 0.2505, 0.5]
+        H2OSTR: [1.04, 1.2875]
+        GNDALT: [0.001, 0.5, 1]
+        OBSZEN: [160, 170]
+        TRUEAZ: [70, 75]
+      radiative_transfer_engines:
+        vswir:
+          aerosol_model_file: ${.isofit_root}/data/aerosol_model.txt
+          aerosol_template_file: ${.isofit_root}/data/aerosol_template.json
+          earth_sun_distance_file: ${.isofit_root}/data/earth_sun_distance.txt
+          emulator_aux_file: ${$EMULATOR}/sRTMnet_v100_aux.npz
+          emulator_file: ${$EMULATOR}/sRTMnet_v100
+          engine_base_dir: ${$ENGINE}
+          engine_name: sRTMnet
+          interpolator_base_path: ${.working_dir}/lut_full/emulatordim_-2_slice_0_vi
+          irradiance_file: ${.isofit_root}/examples/20151026_SantaMonica/data/prism_optimized_irr.dat
+          lut_names: ['H2OSTR', 'AOT550', 'GNDALT', 'OBSZEN', 'TRUEAZ']
+          lut_path: ${.working_dir}/lut_full
+          statevector_names: ['H2OSTR', 'AOT550']
+          template_file: ${.working_dir}/ang20170323t202244_modtran_tpl.json
+      statevector:
+        AOT550:
+          bounds: [0.001, 0.5]
+          init: 0.0509
+          prior_mean: 0.0509
+          prior_sigma: 10.0
+          scale: 1
+        H2OSTR:
+          bounds: [1.04, 1.2875]
+          init: 1.287
+          prior_mean: 1.287
+          prior_sigma: 100.0
+          scale: 1
+      unknowns:
+        H2O_ABSCO: 0.0
+    surface:
+      select_on_init: True
+      surface_category: multicomponent_surface
+      surface_file: ${.working_dir}/data/surface.mat
+  implementation:
+    mode: inversion
+    task_inflation_factor: 10
+    rte_configure_and_exit: False
+    rte_auto_rebuild: True
+    io_buffer_size: 100
+    max_hash_table_size: 50
+    inversion:
+      windows: [[380.0, 1340.0], [1450.0, 1800.0], [1970.0, 2500.0]]
+    n_cores: -1
+    ip_head: null
+    redis_password: null
+    ray_include_dashboard: False
+    ray_ignore_reinit_error: True
+    ray_temp_dir: /tmp/ray
+  input:
+    measured_radiance_file: null
+    reference_reflectance_file: null
+    reflectance_file: null
+    obs_file: null
+    glt_file: null
+    loc_file: null
+    background_reflectance_file: null
+    radiometry_correction_file: null
+  output:
+    estimated_reflectance_file: ${.working_dir}/output/ang20170323t202244_rfl
+    estimated_state_file: ${.working_dir}/output/ang20170323t202244_state
+    posterior_uncertainty_file: ${.working_dir}/output/ang20170323t202244_uncert

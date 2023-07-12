@@ -1,0 +1,477 @@
+.children:
+
+  isofit_root:
+    .desc: TODO
+    .type: str
+    .required: True
+    .default: /users/jamesmo/isofit
+    .checks:
+      - isdir
+
+  working_dir:
+    .desc: TODO
+    .type: str
+    .required: True
+    .default: ${.isofit_root}/examples/profiling_cube
+    .checks:
+      - isdir
+
+  forward_model:
+    .desc: TODO
+    .required: True
+    .children:
+      model_discrepancy_file:
+        .desc: Points to an numpy-format covariance matrix
+        .type: str
+        .required: False
+      instrument:
+        .desc: Instrument config section
+        .required: False
+        .children:
+          integrations:
+            .desc: TODO
+            .type: int
+            .required: False
+            .default: 1
+          parametric_noise_file:
+            .desc: TODO
+            .type: str
+            .required: False
+            .default: ${.isofit_root}/data/avirisng_noise.txt
+            .checks:
+              - isfile
+          unknowns:
+            .desc: TODO
+            .required: False
+            .children:
+              uncorrelated_radiometric_uncertainty:
+                .desc: TODO
+                .type: float
+                .required: False
+                .default: 0.01
+          wavelength_file:
+            .desc: TODO
+            .type: str
+            .required: False
+            .default: ${.isofit_root}/data/wavelengths.txt
+            .checks:
+              - isfile
+      radiative_transfer:
+        .desc: Radiative transfer config section
+        .required: True
+        .children:
+          interpolator_style:
+            .desc: TODO
+            .type: str
+            .required: False
+            .default: mlg
+            .checks:
+              - oneof:
+                  options:
+                    - mlg
+                    - rg
+                    - nds-\d+
+                  regex: True
+          overwrite_interpolator:
+            .desc: TODO
+            .type: bool
+            .required: False
+            .default: True
+          lut_grid:
+            .desc: TODO
+            .required: False
+            .children:
+              AOT550:
+                .desc: TODO
+                .type: list
+                .required: False
+                .default: [0.001, 0.2505, 0.5]
+              H2OSTR:
+                .desc: TODO
+                .type: list
+                .required: False
+                .default: [1.04, 1.2875]
+              GNDALT:
+                .desc: TODO
+                .type: list
+                .required: False
+                .default: [0.001, 0.5, 1]
+              OBSZEN:
+                .desc: TODO
+                .type: list
+                .required: False
+                .default: [160, 170]
+              TRUEAZ:
+                .desc: TODO
+                .type: list
+                .required: False
+                .default: [70, 75]
+          radiative_transfer_engines:
+            .desc: TODO
+            .required: False
+            .children:
+              vswir:
+                .desc: TODO
+                .required: False
+                .children:
+                  aerosol_model_file:
+                    .desc: TODO
+                    .type: str
+                    .required: False
+                    .default: ${.isofit_root}/data/aerosol_model.txt
+                    .checks:
+                      - isfile
+                  aerosol_template_file:
+                    .desc: TODO
+                    .type: str
+                    .required: False
+                    .default: ${.isofit_root}/data/aerosol_template.json
+                    .checks:
+                      - isfile
+                  earth_sun_distance_file:
+                    .desc: TODO
+                    .type: str
+                    .required: False
+                    .default: ${.isofit_root}/data/earth_sun_distance.txt
+                    .checks:
+                      - isfile
+                  emulator_aux_file:
+                    .desc: TODO
+                    .type: str
+                    .required: True
+                    .default: ${$EMULATOR}/sRTMnet_v100_aux.npz
+                    .checks:
+                      - isfile
+                  emulator_file:
+                    .desc: TODO
+                    .type: str
+                    .required: True
+                    .default: ${$EMULATOR}/sRTMnet_v100
+                    .checks:
+                      - isdir
+                  engine_base_dir:
+                    .desc: TODO
+                    .type: str
+                    .required: True
+                    .default: ${$ENGINE}
+                    .checks:
+                      - isdir
+                  engine_name:
+                    .desc: TODO
+                    .type: str
+                    .required: True
+                    .default: sRTMnet
+                  interpolator_base_path:
+                    .desc: TODO
+                    .type: str
+                    .required: False
+                    .default: ${.working_dir}/lut_full/emulatordim_-2_slice_0_vi
+                  irradiance_file:
+                    .desc: TODO
+                    .type: str
+                    .required: False
+                    .default: ${.isofit_root}/examples/20151026_SantaMonica/data/prism_optimized_irr.dat
+                  lut_names:
+                    .desc: TODO
+                    .type: list
+                    .required: False
+                    .default:
+                      - H2OSTR
+                      - AOT550
+                      - GNDALT
+                      - OBSZEN
+                      - TRUEAZ
+                  lut_path:
+                    .desc: TODO
+                    .type: str
+                    .required: False
+                    .default: ${.working_dir}/lut_full
+                  statevector_names:
+                    .desc: TODO
+                    .type: list
+                    .required: False
+                    .default:
+                      - H2OSTR
+                      - AOT550
+                  template_file:
+                    .desc: TODO
+                    .type: str
+                    .required: False
+                    .default: ${.working_dir}/ang20170323t202244_modtran_tpl.json
+          statevector:
+            .desc: TODO
+            .required: False
+            .children:
+              AOT550:
+                .desc: TODO
+                .required: False
+                .children:
+                  bounds:
+                    .desc: TODO
+                    .type: list
+                    .required: False
+                    .default:
+                      - 0.001
+                      - 0.5
+                  init:
+                    .desc: TODO
+                    .type: float
+                    .required: False
+                    .default: 0.0509
+                  prior_mean:
+                    .desc: TODO
+                    .type: float
+                    .required: False
+                    .default: 0.0509
+                  prior_sigma:
+                    .desc: TODO
+                    .type: float
+                    .required: False
+                    .default: 10.0
+                  scale:
+                    .desc: TODO
+                    .type: [int, float]
+                    .required: False
+                    .default: 1
+                    .checks:
+                      - compare:
+                          gte: 0.0
+                          lte: 1.0
+              H2OSTR:
+                .desc: TODO
+                .required: False
+                .children:
+                  bounds:
+                    .desc: TODO
+                    .type: list
+                    .required: False
+                    .default:
+                      - 1.04
+                      - 1.2875
+                  init:
+                    .desc: TODO
+                    .type: float
+                    .required: False
+                    .default: 1.287
+                  prior_mean:
+                    .desc: TODO
+                    .type: float
+                    .required: False
+                    .default: 1.287
+                  prior_sigma:
+                    .desc: TODO
+                    .type: float
+                    .required: False
+                    .default: 100.0
+                  scale:
+                    .desc: TODO
+                    .type: [int, float]
+                    .required: False
+                    .default: 1
+          unknowns:
+            .desc: TODO
+            .required: False
+            .children:
+              H2O_ABSCO:
+                .desc: TODO
+                .type: float
+                .required: False
+                .default: 0.0
+      surface:
+        .desc: Surface config section
+        .required: False
+        .children:
+          select_on_init:
+            .desc: TODO
+            .type: bool
+            .required: False
+            .default: True
+          surface_category:
+            .desc: TODO
+            .type: str
+            .required: False
+            .default: multicomponent_surface
+          surface_file:
+            .desc: TODO
+            .type: str
+            .required: False
+            .default: ${.working_dir}/data/surface.mat
+            .checks:
+              - isfile
+
+  implementation:
+    .desc: TODO
+    .required: False
+    .children:
+      mode:
+        .desc: Defines the operating mode for isofit
+        .type: str
+        .required: False
+        .default: inversion
+        .checks:
+          - oneof:
+              options:
+                - inversion
+                - inversion_mcmc
+                - simulation
+      task_inflation_factor:
+        .desc: Submit task_inflation_factor*n_cores number of tasks
+        .type: int
+        .required: False
+        .default: 10
+      rte_configure_and_exit:
+        .desc: Indicates that code should terminate as soon as all radiative transfer engine configuration files are written (without running them)
+        .type: bool
+        .required: False
+        .default: False
+      rte_auto_rebuild:
+        .desc: Flag indicating whether radiative transfer engines should automatically rebuild
+        .type: bool
+        .required: False
+        .default: True
+      io_buffer_size:
+        .desc: Integer indicating how large (how many spectra) of chunks to read/process/write. A buffer size of 1 means pixels are processed independently. Large buffers can help prevent IO choke points, especially if the
+        .type: int
+        .required: False
+        .default: 100
+      max_hash_table_size:
+        .desc: The maximum size of inversion hash tables.  Can provide speedups with redundant surfaces, but comes with increased memory costs
+        .type: int
+        .required: False
+        .default: 50
+      inversion:
+        .desc: Optional config for running in inversion mode
+        .type: dict
+        .required: False
+        .children:
+          windows:
+            .desc: TODO
+            .type: list
+            .required: False
+            .default: [
+              [
+                380.0,
+                1340.0
+              ], [
+                1450.0,
+                1800.0
+              ], [
+                1970.0,
+                2500.0
+              ]
+            ]
+      n_cores:
+        .desc: Number of cores to use
+        .type: int
+        .required: False
+        .default: -1
+      ip_head:
+        .desc: Ray IP-head (for multi-node runs)
+        .type: str
+        .required: False
+        .default: null
+        .checks:
+          - implementation_ray
+      redis_password:
+        .desc: Ray Redis-password (for multi-node runs)
+        .type: str
+        .required: False
+        .default: null
+        .checks:
+          - implementation_ray
+      ray_include_dashboard:
+        .desc: To include the Ray dashboard or not
+        .type: bool
+        .required: False
+        .default: False
+      ray_ignore_reinit_error:
+        .desc: Informs Ray to ignore re-initilaization.  Can be convenient for multiple Isofit instances
+        .type: bool
+        .required: False
+        .default: True
+      ray_temp_dir:
+        .desc: Overrides the standard ray temporary directory. Useful for multiuser systems
+        .type: str
+        .required: False
+        .default: /tmp/ray
+
+  input:
+    .desc: Input file(s) configuration
+    .required: True
+    .children:
+      measured_radiance_file:
+        .desc: Input radiance file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Used for inverse-modeling (radiance -> reflectance)
+        .type: str
+        .required: True
+        .default: null
+        .checks:
+          - isfile
+      reference_reflectance_file:
+        .desc: Input reference reflectance (to be compared against) file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Used for radiometric calibration
+        .type: str
+        .required: False
+        .default: null
+        .checks:
+          - isfile
+      reflectance_file:
+        .desc: Input reflectance file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Used for forward-modeling (reflectance -> radiance)
+        .type: str
+        .required: False
+        .default: null
+        .checks:
+          - isfile
+      obs_file:
+        .desc: "Input 'obs', or observation, file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Provides information about the conditions during observaiton.  Assumed to be in the band-wise format: {path length, to-sensor azimuth, to-sensor zenith, to-sun azimuth, to-sun zenith, phase, slope, aspect, cosine i, UTC time}"
+        .type: str
+        .required: True
+        .default: null
+        .checks:
+          - isfile
+      glt_file:
+        .desc: Input glt file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Provides (x,y) offset information for the spatial location of raw-space input files
+        .type: str
+        .required: False
+        .default: null
+        .checks:
+          - isfile
+      loc_file:
+        .desc: Input 'loc', or location, file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Provides per-pixel lat, long, and elevation information
+        .type: str
+        .required: True
+        .default: null
+        .checks:
+          - isfile
+      background_reflectance_file:
+        .desc: Background reflectance file used for spatial inference. Should be an ENVI formatted binary cube that is the same dimensions as the input data cube
+        .type: str
+        .required: False
+        .default: null
+        .checks:
+          - isfile
+      radiometry_correction_file:
+        .desc: Input radiometric correction file.  Can be either a .mat, .txt, or ENVI formatted binary cube. Used to make minor channelized corrections to account for slight systematic errors not captured in calibration
+        .type: str
+        .required: False
+        .default: null
+        .checks:
+          - isfile
+
+  output:
+    .desc: TODO
+    .required: True
+    .children:
+      estimated_reflectance_file:
+        .desc: TODO
+        .type: str
+        .required: True
+        .default: ${.working_dir}/output/ang20170323t202244_rfl
+      estimated_state_file:
+        .desc: TODO
+        .type: str
+        .required: True
+        .default: ${.working_dir}/output/ang20170323t202244_state
+      posterior_uncertainty_file:
+        .desc: TODO
+        .type: str
+        .required: True
+        .default: ${.working_dir}/output/ang20170323t202244_uncert
