@@ -31,6 +31,11 @@ def null(*args, **kwargs):
     return Null()
 
 
+@register('os.cpu_count')
+def cpu_count():
+    return os.cpu_count()
+
+
 @register()
 def oneof(value, options, regex=False):
     """

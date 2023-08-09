@@ -87,13 +87,13 @@ class Config:
             return
 
         data = None
-        name = ''
+        name = None
 
         # Returning from pickle case (__reduce__)
         if isinstance(input, tuple):
             data, input, inherit, defs, local = input
             name = '<-'.join(inherit)
-        else:
+        elif input is not None:
             if isinstance(input, dict):
                 data = input
 
@@ -196,6 +196,9 @@ class Config:
         if isinstance(value, Section):
             value._name = key
         self._sect[key] = value
+
+    def __setitem__(self, key, value):
+        self.__setattr__(key, value)
 
     def __repr__(self):
         return f'<Config (local={self._local}, inherit={self._name}, {self._sect})>'
