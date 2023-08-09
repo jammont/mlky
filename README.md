@@ -24,9 +24,7 @@ conda install -c jammont mlky
 
 - **Configuration Inheritance**: The core of mlky is the inheritance structure that enables configuration sections to inherit from others. This empowers users to craft intricate configuration setups, overriding keys, subkeys, and updating values as needed.
 
-- **Adaptive Flexibility**: mlky employs an innovative Pythonic interface that sits atop various configuration file types such as YAML, XML, and JSON. The configuration object is instantiated as a Python dictionary, facilitating adaptability for both new and existing projects.
-
-- **Forgiving or Restrictive**:
+- **Forgiving or Restrictive**: mlky imposes minimal requirements right out of the box. With the custom-built `Null` class, mlky avoids raising exceptions when pieces of the configuration are absent. This allows developers to focus on developing their code and less on developing their configuration structures. However, mlky also provides the tools for developers to restrict exactly what configurations consist of. The flexibility of your configuration is for you to define!
 
 - **Customizable Restriction**: While flexibility is paramount, mlky uniquely provides developers the ability to enforce restrictions on a per-key basis. Error-checking, type-checking, type-coercion, and custom parse functions are supported, enabling fine-grained control over configuration options.
 
