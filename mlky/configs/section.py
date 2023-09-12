@@ -1,5 +1,6 @@
 """
 """
+import copy
 import logging
 
 from . import (
@@ -26,9 +27,6 @@ class Var:
             Logger.warning(f'Checks for {name} is a dict instead of a list, attempting to correct but you may need to fix the definitions document')
             checks = [{k: v} for k, v in checks.items()]
 
-        # Prepend so type checking is the first check ran
-        checks = [{'type': {'type': type}}] + checks
-
         super().__setattr__('name'    , name    )
         super().__setattr__('key'     , key     )
         super().__setattr__('value'   , value   )
@@ -51,11 +49,8 @@ class Var:
             if self.validate(value, reduced=True) is not True:
                 Logger.error('Changing the value will cause validation to fail. See <This Var>.validate() for errors.')
         elif key == 'type':
-            if Functions.check('type', type=value) is not True:
-                Logger.warning(f'Changing type from {self.type!r} to {value!r} will cause validation to fail with the current value: {self.value!r}')
-
-            # Replace the check function
-            self.checks[0] = {'type': {'type': value}}
+            if Functions.check('type', value, self.type) is not True:
+                Logger.warning(f'Changing type from {self.type!r} to {value!r} causes validation to fail with the current value: {self.value!r}')
 
         super().__setattr__(key, value)
 
@@ -68,6 +63,10 @@ class Var:
         """
         if value is Null:
             value = self.value
+
+        # Not required, already a null value (either set in config explicitly as null or inherently null)
+        if not self.required and value == Null:
+            return True
 
         return Functions.check('type', value, self.type)
 
@@ -83,7 +82,6 @@ class Var:
 
         errors = {}
 
-        typecheck = []
         if self.missing:
             if self.required:
                 errors['required'] = 'This key is required to be manually set in the config'
@@ -91,7 +89,19 @@ class Var:
             # Don't run any checks if the key was missing
             return errors or True
 
-        for check in self.checks:
+        errs = self.check_type()
+        if errs is True:
+            if not reduced:
+                errors['type'] = errs
+        else:
+            errors['type'] = errs
+
+        # Prepend the type check so it happens first
+        checks = self.checks
+        if self.required or not self.type == Null:
+            checks = [{'type': {'dtype': self.type}}] + checks
+
+        for check in checks:
             kwargs = {}
             if isinstance(check, dict):
                 (check, kwargs), = list(check.items())
@@ -118,7 +128,7 @@ class Var:
         else:
             return self.default
 
-    def replace(self, value=None):
+    def replace(self):
         """
         Importing inside this function breaks the potential import loop, where
         a->b means a depends on b:
@@ -138,16 +148,23 @@ class Var:
                 return replaced
             return value
 
-        if value is None:
-            if isinstance(self.value, str):
-                super().__setattr__('value', lookup(self.value))
-            elif isinstance(self.value, list):
-                super().__setattr__('value', [
+        keys = ['value', 'default']
+        for key in keys:
+            value = getattr(self, key)
+            if isinstance(value, str):
+                super().__setattr__(key, lookup(value))
+            elif isinstance(value, list):
+                super().__setattr__(key, [
                     lookup(item) if isinstance(item, str) else item
-                    for item in self.value
+                    for item in value
                 ])
-        else:
-            return lookup(value)
+
+    def replace_(self, *args, **kwargs):
+        """
+        Alias for self.replace() to simplify code in Section since Section uses
+        Section.replace_().
+        """
+        return self.replace(*args, **kwargs)
 
 
 class Section:
@@ -200,6 +217,7 @@ class Section:
         # Populate any missing keys
         for key, value in children.items():
             if key not in data:
+                Logger.debug(f'Key missing, setting from definitions: {key}')
                 self.set_defs_(key, value)
 
         if debug:
@@ -287,6 +305,24 @@ class Section:
                 checks   = defs.get('.checks'  , []    )
             )
 
+    def __add__(self, other):
+        def update(a, b):
+            """
+            Recursively updates the dictionary B with the data of dictionary A
+            """
+            for k, v in a.items():
+                if k in b and isinstance(v, (dict, self.__class__)):
+                    update(v, b[k])
+                else:
+                    b[k] = v
+
+            return b
+
+        if not isinstance(other, (self.__class__, dict)):
+            raise TypeError("Section objects can only add with dicts or Sections")
+
+        return update(other, self.deepcopy_())
+
     def __reduce__(self):
         return (type(self), (self._name, self._data, self._defs))
 
@@ -296,6 +332,12 @@ class Section:
         new._data = copy.deepcopy(self._data, memo)
         new._defs = copy.deepcopy(self._defs, memo)
         return new
+
+    def deepcopy_(self):
+        """
+        Deep copies the object
+        """
+        return copy.deepcopy(self)
 
     def __contains__(self, key):
         return key in self._data
@@ -376,19 +418,16 @@ class Section:
 
     def replace_(self, value=None):
         """
+        Simply calls .replace_() on every item in the Section.
         """
         if value is None:
             value = self._data.values()
 
         for item in value:
-            if isinstance(item, Var):
-                item.replace()
-            elif isinstance(item, Section):
-                self.replace_(item._data.values())
-            elif isinstance(item, dict):
-                self.replace_(item.values())
-            elif isinstance(item, list):
-                self.replace_(item)
+            if isinstance(item, (Var, Section)):
+                item.replace_()
+            else:
+                Logger.error("Section attempting to replace on an internal value that isn't either a Var or Section")
 
     def validate_(self, value=None, reduced=True, fmt=False):
         """
@@ -404,7 +443,7 @@ class Section:
             for key, value in self._data.items():
                 if isinstance(value, (Section, Var)):
                     errs = value.validate_(reduced=reduced)
-                    if errs is not True:
+                    if errs:
                         # errors[self.fmt_(key)] = errs
                         errors.append((self.fmt_(key), errs))
 
@@ -419,7 +458,7 @@ class Section:
             for i, item in enumerate(value):
                 if isinstance(value, (Section, Var)):
                     errs = value.validate_(reduced=reduced)
-                    if errs is not True:
+                    if errs:
                         # errors[self.fmt_(key)] = errs
                         errors.append((self.fmt_(key), errs))
 
@@ -430,7 +469,7 @@ class Section:
                             (self.fmt_(key, i), self.validate_(item, reduced=reduced))
                         )
 
-        return errors or True
+        return errors
 
     def report_(self, errors=None):
         """
@@ -447,7 +486,7 @@ class Section:
         error = False
         for key, errs in errors:
             if isinstance(errs, list):
-                error = self.report_(errs)
+                error = self.report_(errs) or error
             elif isinstance(errs, dict):
                 error = True
                 Logger.error(key)
