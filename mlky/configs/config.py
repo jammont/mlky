@@ -56,7 +56,7 @@ class Config:
     a maximum recursion error. This can be resolved by simply initializing the Config
     class instance again.
     """
-    def __init__(self, input=None, inherit=[], local=False, defs={}, defs_inherit=[], _validate=True, _raise=True):
+    def __init__(self, input=None, inherit=[], defs={}, defs_inherit=[], local=False, _validate=True, _raise=True):
         """
         Parameters
         ----------
@@ -126,15 +126,18 @@ class Config:
                 defs = load_string(defs)
 
             if defs_inherit:
+                if isinstance(defs_inherit, str):
+                    defs_inherit = defs_inherit.split('<-')
+
                 defs = self.inherit_(defs_inherit, defs)
 
         # Local instances will copy class._data when not provided new input
         if data is None:
-            data = self._data
+            data = self.__class__._data
 
             # Only retrieve _defs when data is None
             if not defs:
-                defs = self._defs
+                defs = self.__class__._defs
 
         sect = Section(name='', data=data, defs=defs)
         defs = Section(name='', data=defs)
@@ -263,6 +266,8 @@ class Config:
             Logger.error('Failed checks, see above for errors')
             if _raise:
                 raise Exception('The configuration did not pass validation. See logs for more details.')
+        else:
+            Logger.info('No errors found')
 
         return errors
 
