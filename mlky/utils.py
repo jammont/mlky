@@ -49,6 +49,9 @@ def column_fmt(iterable, enum=False, delimiter='=', offset=1, prepend='', print=
             left.append(str(item[0]))
             right.append(str(item[1]))
 
+    if not left:
+        return []
+
     padding   = max([0, max(map(len, left))]) + offset
     formatter = prepend
     if enum:
@@ -117,6 +120,7 @@ def align_print(iterable, enum=False, delimiter='=', offset=1, prepend='', print
         pad   = len(max(iterable.keys(), key=len))
         items = iterable.items()
     else:
+        assert len(iterable) > 0, 'Iterable must not be empty'
         assert all([len(item) == 2 for item in iterable]), 'Iterable must contain iterables of length 2'
         pad   = len(max(iterable, key=lambda v: len(v[0])))
         items = iterable

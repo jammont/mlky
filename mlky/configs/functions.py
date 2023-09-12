@@ -66,10 +66,10 @@ class Functions:
         def protect(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
-            except:
+            except Exception as e:
                 Logger.exception(f'Register {key} raised an exception:')
-                Logger.warning('Returning False due to the exception. This may cause unintended behaviour.')
-                False
+                Logger.warning('Returning the exception message. This may cause unintended behaviour.')
+                return str(e)
 
         if key in cls.funcs:
             Logger.warning(f'Function {key}')
@@ -115,7 +115,7 @@ Types = {
 }
 
 @register('type')
-def check_type(value, type):
+def check_type(value, dtype):
     """
     Checks the type of a given value.
 
@@ -123,7 +123,7 @@ def check_type(value, type):
     ----------
     value: any
         The value in question
-    type: any
+    dtype: any
         The type this value is supposed to be. If type in [Null, 'Null', None,
         'None', 'any'] then the check is disabled and will return True.
         Otherwise, uses the Types dictionary to lookup the function to validate
@@ -135,16 +135,16 @@ def check_type(value, type):
         Returns True if this value is the expected type. If it is not, returns
         either a string or list of strings describing the error.
     """
-    if isinstance(type, list):
-        if True not in [check_type(value, t) for t in type]:
-            return f'Value type <{type!r}> is not one of {type}'
+    if isinstance(dtype, list):
+        if True not in [check_type(value, t) for t in dtype]:
+            return f'Value type <{dtype!r}> is not one of {dtype}'
         else:
             return True
 
     # Try a builtin then fallback to custom registered
-    func = Types.get(type, Functions.get(type))
+    func = Types.get(dtype, Functions.get(dtype))
     if func is None:
-        return f'Unknown type: {type!r}'
+        return f'Unknown type: {dtype!r}'
 
     ret = func(value)
     if ret is True:
@@ -152,4 +152,4 @@ def check_type(value, type):
     if isinstance(ret, (str, list)):
         return ret
     else:
-        return f'Wrong type: Expected <{type!r}> Got <>'
+        return f'Wrong type: Expected <{dtype!r}> Got {type(value)}'
