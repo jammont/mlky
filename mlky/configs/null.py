@@ -1,8 +1,13 @@
 """
 The Null class of mlky.
 """
+import logging
 
-class Null:
+
+Logger = logging.getLogger('__file__')
+
+
+class NullType(type):
     """
     Acts like a Nonetype (generally) without raising an exception in common use
     cases such as:
@@ -11,43 +16,49 @@ class Null:
     - Dict functions .get, .keys, and .items will return empty lists/dicts.
     - Comparisons should always return False unless compared to a None or Null
     type.
+
+    Warnings can be disabled via:
+    >>> Null._warn = False
     """
-    def __call__(self, *args, **kwargs):
-        pass
+    _warn = True
+
+    def __call__(cls, *args, **kwargs):
+        return cls
 
     def __deepcopy__(self, memo):
         return type(self)()
 
-    def __bool__(self):
-        return False
-
-    def __eq__(self, other):
-        if type(other) in [type(None), type(self)] or other is Null:
-            return True
-        return False
-
-    def __hash__(self):
+    def __hash__(cls):
         return hash(None)
 
-    def __getattr__(self, key):
-        return self
-
-    def __getitem__(self, key):
-        return self
-
-    def __contains__(self):
+    def __bool__(cls):
         return False
 
-    def __iter__(self):
-        return iter(())
+    def __contains__(cls):
+        return False
 
-    def __len__(self):
-        return 0
+    def __eq__(cls, other):
+        return type(other) in [type(None), type(cls)]
 
-    def __repr__(self):
+    def __setattr__(cls, key, value):
+        if key == '_warn':
+            super().__setattr__(key, value)
+        elif cls._warn:
+            Logger.warning(f'{cls.__name__} objects cannot take attribute assignments but will not raise an exception')
+
+    def __getattr__(cls, key):
+        return cls
+
+    def __setitem__(cls, key, value):
+        setattr(cls, key, value)
+
+    def __getitem__(cls, key):
+        return cls
+
+    def __str__(cls):
         return 'Null'
 
-    def __str__(self):
+    def __repr__(cls):
         return 'Null'
 
     def get(self, key, other=None):
@@ -57,4 +68,8 @@ class Null:
         return []
 
     def items(self):
-        return {}
+        return ()
+
+
+class Null(metaclass=NullType):
+    ...
