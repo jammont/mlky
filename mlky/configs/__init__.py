@@ -1,18 +1,29 @@
 """
+Order of operations matter due to dependencies
 """
-# Order of operations matter due to dependencies
-from .null      import Null
+# Independent
+from .null import Null
+
+# Dependent on Null
 from .functions import (
     Functions,
     register
 )
+
+# Dependent on Null, Functions
+from .var import Var
+
+# Dependent on Null, Functions, register
 from . import builtins
-from .section import (
-    Section,
-    Var
-)
+
+# Dependent on Null, Functions, Var
+from .sect import Sect
+
+# Dependent on Sect
 from .definitions import generate
-from .config      import (
-    Config,
-    replace
-)
+
+# Dependent on Null, Functions, register, Var, Sect
+from .config import Config
+
+# Dependent on Config, register
+from . import magics
