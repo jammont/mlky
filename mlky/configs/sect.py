@@ -43,16 +43,11 @@ class Sect:
     _sect = nict()
     _repr = 10
     _dbug = -1
-    _dofs = 0
 
-    def __init__(self, data={}, name="", defs={}, missing=False, debug=-1, _repr=10, _dofs=0, **kwargs):
+    def __init__(self, data={}, name="", defs={}, missing=False, debug=-1, _repr=10, **kwargs):
         """
         Parameters
         ----------
-        _dofs: int, defaults=0
-            Debug offset value, helps with formatting the log messages
-            hierarchical. Private variable that should only be managed by
-            parent/child Sect relationships
         debug: int or list, defaults=-1
             Controls the verbosity of the class. Higher values is increased
             verbosity. Current levels:
@@ -84,7 +79,6 @@ class Sect:
         self.__dict__['_miss'] = missing
         self.__dict__['_dbug'] = set(debug)
         self.__dict__['_repr'] = _repr
-        self.__dict__['_dofs'] = _dofs
         self.__dict__['_sect'] = nict()
 
         children = defs.get('.children', {})
@@ -181,7 +175,7 @@ class Sect:
     def __deepcopy__(self, memo):
         cls = self.__class__
         new = cls.__new__(cls)
-        memo[id(self)+1] = new
+        memo[id(self)] = new
         for key, val in self.__dict__.items():
             self._debug(1, '__deepcopy__', f'Deep copying __dict__[{key!r}] = {val!r}')
             new.__dict__[key] = copy.deepcopy(val, memo)
@@ -207,12 +201,20 @@ class Sect:
 
         return f"<{type(self).__name__} {self._name or '.'} (Attrs={attrs}, Sects={sects})>"
 
+    @property
+    def _debugOffset(self):
+        """
+        Padding to pretty print the debug statements into a hierarchical
+        structure
+        """
+        return '  ' * (len(self._name.split('.')) - 1)
+
     def _debug(self, level, func, msg):
         """
         Formats debug messages
         """
         if level in self._dbug or func in self._dbug:
-            Logger.debug('  '*self._dofs + f'<{type(self).__name__}>({self._name}).{func}() {msg}')
+            Logger.debug(f'{self._debugOffset}<{type(self).__name__}>({self._name}).{func}() {msg}')
 
     def _patch(self, other, inplace=True):
         """
@@ -223,7 +225,7 @@ class Sect:
             self._debug(1, '_patch', 'Patching on deep copy')
 
         # Auto cast to Sect so merges are easier
-        for key, value in Sect(other, _dofs=self._dofs).items(var=True):
+        for key, value in Sect(other).items(var=True):
             name = self._subkey(key)
             data = self.get(key, var=True)
 
@@ -240,7 +242,6 @@ class Sect:
                 # Update the name to reflect potential changes in the hierarchy
                 self._debug(1, '_patch', f'└ Changing Sect name from {sect._name} to {name}')
                 sect._name = name
-                sect._dofs = self._dofs + 1
 
             else:
                 # Log whether this is replacing or adding a Var, or if something borked
@@ -314,7 +315,6 @@ class Sect:
                 defs  = defs,
                 debug = self._dbug,
                 _repr = self._repr,
-                _dofs = self._dofs + 1,
                 **kwargs
             )
 
@@ -330,6 +330,7 @@ class Sect:
                 name  = name,
                 key   = key,
                 value = value,
+                debug = self._dbug,
                 required = defs.get('.required', False),
                 dtype    = defs.get('.type'    , Null ),
                 default  = defs.get('.default' , Null ),
@@ -415,6 +416,12 @@ class Sect:
         self._debug(3, 'get', f'[{key!r}] is Null, returning other: {other!r}')
         return other
 
+    def keys(self):
+        return self._sect.keys()
+
+    def values(self):
+        return self._sect.values()
+
     def items(self, var=False):
         """
         """
@@ -449,3 +456,15 @@ class Sect:
                 self._debug(0, 'toDict', f'Converting child Sect [{key!r}].toDict()')
                 data[key] = value.toDict()
         return data
+
+    def resetVars(self):
+        """
+        Runs reset on each Var
+        """
+        for key, item in self.items(var=True):
+            if isinstance(item, Sect):
+                item.resetVars()
+            elif isinstance(item, Var):
+                item.reset()
+            else:
+                Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')

@@ -25,5 +25,5 @@ from .definitions import generate
 # Dependent on Null, Functions, register, Var, Sect
 from .config import Config
 
-# Dependent on Config, register
+# Dependent on Null, Functions, register, Config
 from . import magics

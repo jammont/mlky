@@ -3,7 +3,7 @@ Utilities for the `definitions` files
 """
 import click
 
-from . import Sect
+from .sect import nict
 from ..utils import (
     column_fmt,
     load_string
@@ -12,7 +12,7 @@ from ..utils import (
 
 Comments = {
     'default': ('default:', '?', 'Type', 'Default options across all scripts'),
-    'list Sect': ('', '', 'This is a list of dictionary Sect. There can be multiple entries of the following keys using `-` to separate entries.'),
+    'list section': ('', '', 'This is a list of dictionary section. There can be multiple entries of the following keys using `-` to separate entries.'),
     'header': """\
 # mlky uses special syntax ${?key} to perform value replacement operations at runtime:
 #   ${.key} - Replace this ${} in the string with the value at config[key]
@@ -22,15 +22,15 @@ Comments = {
 #
 # Comment keys:
 #   * = This key is required to be manually set
-#   + = This is an optional key under a required Sect
-#   S = Script level Sect
+#   + = This is an optional key under a required section
+#   S = Script level section
 #
 # Usage: --config [this file].yml --inherit default(<-[Sect])+\
 """
 }
 
 # Stores the keys of a definitions file to allow easy changes
-DK = Sect(name='Definition Keys', data={
+DK = nict({
     'ldesc'   : '.desc'    , # Long description
     'sdesc'   : '.short'   , # Short description
     'type'    : '.type'    ,

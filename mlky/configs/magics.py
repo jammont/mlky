@@ -2,9 +2,12 @@
 Handles the magics syntax mlky defines
 """
 import logging
+import re
 
 from . import (
     Config,
+    Null,
+    Functions,
     register
 )
 
@@ -67,39 +70,40 @@ def replace(value):
     >>> replace(config.file)
     '/abc/1/2'
     """
-    matches = re.findall(r"\${([\.\$\!].*?)}", value)
+    if isinstance(value, str):
+        matches = re.findall(r"\${([\.\$\!].*?)}", value)
 
-    for match in matches:
-        # Config lookup case
-        if match.startswith('.'):
-            keys = match.split('.')
+        for match in matches:
+            # Config lookup case
+            if match.startswith('.'):
+                keys = match.split('.')
 
-            if len(keys) < 2:
-                Logger.error(f'Keys path provided is invalid, returning without replacement: {keys!r}')
-                return value
+                if len(keys) < 2:
+                    Logger.error(f'Keys path provided is invalid, returning without replacement: {keys!r}')
+                    return value
 
-            data = Config()
-            for key in keys[1:]:
-                data = data.__getattr__(key)
+                data = Config()
+                for key in keys[1:]:
+                    data = data.__getattr__(key)
 
-            if isinstance(data, Null):
-                Logger.warning(f'Lookup({match}) returned Null. This may not be expected and may cause issues.')
+                if isinstance(data, Null):
+                    Logger.warning(f'Lookup({match}) returned Null. This may not be expected and may cause issues.')
 
-        # Environment variable lookup case
-        elif match.startswith('$'):
-            data = Functions.check('get_env', match[1:])
+            # Environment variable lookup case
+            elif match.startswith('$'):
+                data = Functions.check('get_env', match[1:])
 
-        # Lookup custom function case
-        elif match.startswith('?'):
-            data = Functions.check(match[1:])
+            # Lookup custom function case
+            elif match.startswith('?'):
+                data = Functions.check(match[1:])
 
-        # Data lookup case
-        elif match.startswith('!'):
-            return Functions.check(match[1:])
+            # Data lookup case
+            elif match.startswith('!'):
+                return Functions.check(match[1:])
 
-        else:
-            Logger.warning(f'Replacement matched to string but no valid starter token provided: {match!r}')
+            else:
+                Logger.warning(f'Replacement matched to string but no valid starter token provided: {match!r}')
 
-        value = value.replace('${'+ match +'}', str(data))
+            value = value.replace('${'+ match +'}', str(data))
 
     return value

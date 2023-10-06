@@ -21,12 +21,12 @@ class utils:
             # File case
             if os.path.isfile(data):
                 _, ext = os.path.splitext(data)
-                if ext in ['yml', 'yaml']:
+                if ext in ['.yml', '.yaml']:
                     with open(data, 'r') as file:
                         data = yaml.load(file, Loader=yaml.FullLoader)
-                elif ext in ['json']:
-                    ...
+                elif ext in ['.json']:
                     # TODO: Add json support
+                    ...
             # String case
             else:
                 try:
@@ -34,6 +34,7 @@ class utils:
                     data = yaml.load(data, Loader=yaml.FullLoader)
                 except:
                     raise TypeError('Data input is a string but is not a file nor a yaml string')
+            return data
         else:
             raise TypeError(f'Data input is not a supported type, got {type(data)!r} expected one of: [filepath str, dict, Sect, list, tuple, yaml string]')
 
@@ -42,10 +43,6 @@ class Config(Sect):
     def __init__(self, data={}, patch=[], defs={}, patch_defs=[], debug=False, validate=True, _raise=True, **kwargs):
         """
         """
-        # Initialize with defaults to make certain keys available
-        # super().__init__(data={}, debug=debug)
-
-        # Now initialize with actual values
         super().__init__(
             data  = data,
             defs  = defs,
@@ -133,7 +130,10 @@ class Config(Sect):
         if inplace:
             self._debug(0, 'patchSects', f'Setting new patched Sect inplace')
             self.__dict__['_sect'] = new
-            return self
+            new = self
+
+        # Reset all Vars to refresh any magic changes that need to happen
+        new.resetVars()
 
         return new
 

@@ -19,10 +19,18 @@ class Errors(dict):
 
 
 class Var:
-    def __init__(self, name, key, value=Null, default=Null, dtype=Null, required=False, missing=False, checks=[]):
+    value    = Null
+    debug    = set()
+    missing  = True
+    required = False
+
+    def __init__(self, name, key, value=Null, default=Null, dtype=Null, required=False, missing=False, checks=[], debug=-1):
         """
         Variable container object
         """
+        if isinstance(debug, int):
+            debug = range(0, debug+1)
+
         self.name     = name
         self.key      = key
         self.default  = default
@@ -30,9 +38,11 @@ class Var:
         self.required = required
         self.missing  = missing
         self.checks   = checks
+        self.debug    = set(debug)
 
-        # Assigned differently to circumvent auto-calling validate()
-        super().__setattr__('value', value)
+        # Set last as replace() and validate() will be called
+        self.value    = value
+        self.original = value
 
     def __eq__(self, other):
         data = self.toDict()
@@ -43,9 +53,12 @@ class Var:
         return False
 
     def __deepcopy__(self, memo):
-        data = copy.deepcopy(self.__dict__, memo)
-        new  = type(self)(**data)
+        cls = self.__class__
+        new = cls.__new__(cls)
         memo[id(self)] = new
+        for key, val in self.__dict__.items():
+            self._debug(1, '__deepcopy__', f'Deep copying __dict__[{key!r}] = {val!r}')
+            new.__dict__[key] = copy.deepcopy(val, memo)
         return new
 
     def __reduce__(self):
@@ -59,6 +72,13 @@ class Var:
         """
         """
         if key == 'value':
+            # Always call to see if this value should be replaced
+            new = Functions.check('config.replace', value)
+            if new is not value:
+                self.original = value
+                self._debug(2, '__setattr__', f'Replacing {value!r} with {new!r}')
+                value = new
+
             # Non-empty dict means errors found
             if self.validate(value).reduce():
                 Logger.error(f'Changing the value of this Var({self.name}) will cause validation to fail. See var.validate() for errors.')
@@ -68,11 +88,26 @@ class Var:
     def __repr__(self):
         return f'<Var({self.key}={self.value!r})>'
 
+    @property
+    def _debugOffset(self):
+        """
+        Padding to pretty print the debug statements into a hierarchical
+        structure
+        """
+        return '  ' * (len(self.name.split('.')) - 1)
+
+    def _debug(self, level, func, msg):
+        """
+        Formats debug messages
+        """
+        if level in self.debug or func in self.debug:
+            Logger.debug(f'{self._debugOffset}<{type(self).__name__}>({self.name}).{func}() {msg}')
+
     def toDict(self):
         return self.__dict__
 
-    def deepCopy(self):
-        return copy.deepcopy(self)
+    def deepCopy(self, memo=None):
+        return copy.deepcopy(self, memo)
 
     def checkType(self, value=Null):
         """
@@ -132,8 +167,10 @@ class Var:
 
         return errors or True
 
-    def replace(self):
+    def reset(self):
         """
-        TODO
+        Resets this Var's value to its original. This is primarily useful to
+        reset all Vars to trigger replacements after a Config finishes
+        initialization
         """
-        ...
+        self.value = self.original
