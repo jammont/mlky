@@ -218,17 +218,4 @@ def between(value, a, b, inclusive=False):
     else:
         args['lt'] = b
 
-    if inclusive in ['both', True]:
-        args['gte'] = a
-        args['lte'] = b
-    else:
-        if 'upper' in inclusive:
-            args['gte'] = a
-        else:
-            args['ge'] = a
-        if 'upper' in inclusive:
-            args['gte'] = a
-        else:
-            args['gte'] = a
-
     return compare(value, **args)

@@ -3,7 +3,7 @@ Utilities for the `definitions` files
 """
 import click
 
-from . import Section
+from . import Sect
 from ..utils import (
     column_fmt,
     load_string
@@ -12,7 +12,7 @@ from ..utils import (
 
 Comments = {
     'default': ('default:', '?', 'Type', 'Default options across all scripts'),
-    'list section': ('', '', 'This is a list of dictionary section. There can be multiple entries of the following keys using `-` to separate entries.'),
+    'list Sect': ('', '', 'This is a list of dictionary Sect. There can be multiple entries of the following keys using `-` to separate entries.'),
     'header': """\
 # mlky uses special syntax ${?key} to perform value replacement operations at runtime:
 #   ${.key} - Replace this ${} in the string with the value at config[key]
@@ -22,15 +22,15 @@ Comments = {
 #
 # Comment keys:
 #   * = This key is required to be manually set
-#   + = This is an optional key under a required section
-#   S = Script level section
+#   + = This is an optional key under a required Sect
+#   S = Script level Sect
 #
-# Usage: --config [this file].yml --inherit default(<-[section])+\
+# Usage: --config [this file].yml --inherit default(<-[Sect])+\
 """
 }
 
 # Stores the keys of a definitions file to allow easy changes
-DK = Section(name='Definition Keys', data={
+DK = Sect(name='Definition Keys', data={
     'ldesc'   : '.desc'    , # Long description
     'sdesc'   : '.short'   , # Short description
     'type'    : '.type'    ,
@@ -51,7 +51,7 @@ def format_defs(defs, level='', reqd=False):
 
     Parameters
     ----------
-    defs: milkylib.Section
+    defs: milkylib.Sect
         A MilkyLib requirements template
 
     level: str, default=''
@@ -77,7 +77,7 @@ def format_defs(defs, level='', reqd=False):
         flag        = Requirements flag:
                         ' ' = Optional, may be removed from the config
                         '*' = Required, must be set by the user
-                        '+' = Optional key in a required section
+                        '+' = Optional key in a required Sect
         type        = The required type for the key, eg. int, str, bool
         description = Description of the key
 
@@ -89,13 +89,13 @@ def format_defs(defs, level='', reqd=False):
     >>> write
     [('Default', '?', 'Type', 'Description'),
      ('  key1: 0', ' ', 'int', '...'),
-     ('  Section:', '*', 'dict', '...'),
+     ('  Sect:', '*', 'dict', '...'),
      ('    key2: f', '+', 'str', '...')]
     >>> column_fmt(write, columns={0: {'delimiter': '#', 'offset': 4},
     ...                            1: {'delimiter': '|', 'offset': 1}})
     Default        # ? | Type | Description
       key1: 0      #   | int  | ...
-      Section:     # * | dict | ...
+      Sect:        # * | dict | ...
         key2: f    # + | str  | ...
     """
     if len(defs) == 1 and DK.children in defs:
@@ -130,7 +130,7 @@ def format_defs(defs, level='', reqd=False):
 
             if DK.type == 'list':
                 level += '  '
-                lines.append((f'{level}-', *Comments['list section']))
+                lines.append((f'{level}-', *Comments['list Sect']))
                 flags.append(info)
 
 
@@ -152,7 +152,7 @@ def format_defs(defs, level='', reqd=False):
     return lines, flags
 
 
-def full(lines, flags, sections):
+def full(lines, flags, Sects):
     """
     Generates a full template
     """
@@ -160,7 +160,7 @@ def full(lines, flags, sections):
     # Discover which scripts each line belongs to.
     # If a parent is set to "all" and a child is not, the parent and all children will be
     # set to all scripts except for the non-"all" children. This allows for generating
-    # multiple sections with the same arguments
+    # multiple Sects with the same arguments
     for i, parent in enumerate(flags[:-1]):
         split = False
         for child in flags[i+1:]:
@@ -175,7 +175,7 @@ def full(lines, flags, sections):
 
         # Set all children with default scripts to be that of the parent
         if split:
-            parent['scripts'] = sections
+            parent['scripts'] = Sects
             for child in flags[i+1:]:
                 # Child is not actually a child of this parent
                 if parent['level'] >= child['level']:
@@ -183,24 +183,24 @@ def full(lines, flags, sections):
 
                 # Otherwise set these scripts the same as the parent
                 if child['scripts'] in default:
-                    child['scripts'] = sections
+                    child['scripts'] = Sects
 
-    sections = {'default': [Comments['default']]} | {
-        section: [
-            (f'{section}:', 'S', 'Type', f'Options specific to the {section} script')
-        ] for section in sections
+    Sects = {'default': [Comments['default']]} | {
+        Sect: [
+            (f'{Sect}:', 'S', 'Type', f'Options specific to the {Sect} script')
+        ] for Sect in Sects
     }
 
     for i, line in enumerate(lines):
         if flags[i]['scripts'] in default:
-            sections['default'].append(line)
+            Sects['default'].append(line)
         else:
             for script in flags[i]['scripts']:
-                sections[script].append(line)
+                Sects[script].append(line)
 
     instructions = []
-    for section, lines in sections.items():
-        instructions.append(('', )) # Empty line between sections
+    for Sect, lines in Sects.items():
+        instructions.append(('', )) # Empty line between Sects
         instructions += lines
 
     return instructions
@@ -212,14 +212,14 @@ def generate(defs=None, style='full', comments='inline', file=None):
 
     Parameters
     ----------
-    defs: mlky.Section, default=None
-        The requirements Section object
+    defs: mlky.Sect, default=None
+        The requirements Sect object
     style: str, default='full'
         Style to generate the output as. Current methods:
-        - full    = Top-level sections contain all of the arguments that that
+        - full    = Top-level Sects contain all of the arguments that that
                     specific script uses
-        - reduced = Top-level sections contain only the script-specific arguments,
-                    any 'all' arguments are placed in the default section
+        - reduced = Top-level Sects contain only the script-specific arguments,
+                    any 'all' arguments are placed in the default Sect
         - minimal = Only the required arguments are included
     comments: str, default='inline'
         Style to write the comments for each option. Current styles:
@@ -235,24 +235,24 @@ def generate(defs=None, style='full', comments='inline', file=None):
         List of strings per line for the YAML template
     """
     if isinstance(defs, str):
-        defs = Section(name='defs', data=load_string(defs))
+        defs = Sect(name='defs', data=load_string(defs))
 
     lines, flags = format_defs(defs)
 
-    # Discover the unique set of top-level sections/scripts
-    sections = []
+    # Discover the unique set of top-level Sects/scripts
+    Sects = []
     for _, scripts in flags:
         if isinstance(scripts, list):
-            sections += scripts
+            Sects += scripts
 
-    sections = set(sections)
+    Sects = set(Sects)
 
     if style == 'full':
-        instructions = full(lines, flags, sections)
+        instructions = full(lines, flags, Sects)
     elif style == 'reduced':
-        instructions = reduced(lines, flags, sections)
+        instructions = reduced(lines, flags, Sects)
     elif style == 'minimal':
-        instructions = minimal(lines, flags, sections)
+        instructions = minimal(lines, flags, Sects)
     else:
         Logger.error('Invalid style choice: {style!r}')
         return []
