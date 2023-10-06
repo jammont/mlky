@@ -1,7 +1,11 @@
+"""
+Tests the mlky Var class
+"""
 import pickle
 
 import pytest
 
+from mlky import Sect
 from mlky.configs.var import Var
 
 
@@ -26,7 +30,7 @@ def test_Var(name, key, value, dtype, checks, errors):
     reduced = v.validate().reduce()
     assert reduced == errors, f'Bad errors, expected {errors} got {reduced}'
 
-    return true
+    # return True
 
 
 def test_pickle():
@@ -40,4 +44,4 @@ def test_pickle():
 
     assert sect == load, 'Loaded pickle data does not match original'
 
-    return True
+    # return True

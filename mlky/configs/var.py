@@ -1,12 +1,15 @@
+"""
+Var objects are containers to hold values of a mlky Sect
+"""
 import copy
 import logging
 
-from mlky import (
+from . import (
     Functions,
     Null
 )
 
-__file__ = 'var.py'
+
 Logger = logging.getLogger(__file__)
 
 
@@ -57,7 +60,7 @@ class Var:
         """
         if key == 'value':
             # Non-empty dict means errors found
-            if not self.validate(value).reduce():
+            if self.validate(value).reduce():
                 Logger.error(f'Changing the value of this Var({self.name}) will cause validation to fail. See var.validate() for errors.')
 
         super().__setattr__(key, value)
