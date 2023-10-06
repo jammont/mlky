@@ -23,6 +23,8 @@ class NullType(type):
     _warn = True
 
     def __call__(cls, *args, **kwargs):
+        if cls._warn:
+            Logger.warning(f'Null received a call like a function, was this intended?')
         return cls
 
     def __deepcopy__(self, memo):
@@ -34,6 +36,9 @@ class NullType(type):
     def __bool__(cls):
         return False
 
+    def __or__(cls, other):
+        return other
+
     def __contains__(cls):
         return False
 
@@ -44,7 +49,7 @@ class NullType(type):
         if key == '_warn':
             super().__setattr__(key, value)
         elif cls._warn:
-            Logger.warning(f'{cls.__name__} objects cannot take attribute assignments but will not raise an exception')
+            Logger.warning(f'Null objects cannot take attribute assignments but will not raise an exception')
 
     def __getattr__(cls, key):
         return cls
