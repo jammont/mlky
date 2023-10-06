@@ -178,16 +178,6 @@ class Sect:
             self._miss, self._repr
         ))
 
-    # def __deepcopy__(self, memo):
-    #     new = type(self)()
-    #     memo[id(self)] = new
-    #     cpy = copy.deepcopy(self.__dict__, memo)
-    #     super(type(self), new).__setattr__('__dict__', cpy)
-    #     return new
-
-    def __copy__(self):
-        print('Shallow copy')
-
     def __deepcopy__(self, memo):
         cls = self.__class__
         new = cls.__new__(cls)
