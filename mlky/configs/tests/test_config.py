@@ -1,6 +1,8 @@
 """
 Tests the mlky Config class
 """
+import pytest
+
 from mlky import Config
 
 
@@ -36,5 +38,47 @@ def test_init():
     assert cfg2 == answ, 'Reinitialized config did not match new input'
     assert cfg3 == answ, 'Reinitialized config did not match new input'
     assert cfg4 == answ, 'Reinitialized config did not match new input'
+
+    # return True
+
+
+@pytest.mark.parametrize('data,keys', [
+    ({'a': {'f': {'m': {'r': {'s': 7}}}, 'y': 2}, 'b': {'x': -1}, 'c': {'z': 3}}, ['a', 'b', 'c'])
+])
+def test_yamlDifferences(data, keys):
+    """
+    Tests changes in a config and copies, and dumping and loading yamls
+    """
+    # First initialization
+    conf = Config(data, keys)
+
+    # Create a copy
+    copy = conf.deepCopy()
+    assert copy == conf, 'Copy did not match conf'
+
+    # Tweak it to ensure they differ
+    copy.diff = 1
+    assert copy != conf, 'Copy should not match conf after changing'
+
+    # Make sure the dumps differ too
+    dump = copy.dumpYaml()
+    assert dump != conf.dumpYaml(), 'YAML dumps should not match'
+
+    # Change the copy further to compare with loading
+    copy.load = False
+
+    # Recreate from dump as a local instance
+    load = Config(dump, ['generated'], local=True)
+    assert load != copy, '`load` should not match the `copy` as it was changed after dumping'
+    assert load != conf, '`load` should not match the `conf`'
+
+    # Delete the differences and ensure equality
+    del copy.load
+    assert load == copy, '`load` should now match `copy` after deleting the conflicting key'
+    assert load != conf, '`load` should not match `conf` yet'
+
+    del load.diff
+    assert load != copy, '`load` should not match `copy` anymore'
+    assert load == conf, '`load` should now match `conf` after deleting the conflicting key'
 
     # return True

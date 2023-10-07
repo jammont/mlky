@@ -40,7 +40,7 @@ class utils:
 
 
 class Config(Sect):
-    def __init__(self, data={}, patch=[], defs={}, patch_defs=[], debug=False, validate=True, _raise=True, **kwargs):
+    def __init__(self, data={}, patch=[], defs={}, patch_defs=[], debug=-1, validate=True, _raise=True, **kwargs):
         """
         """
         super().__init__(

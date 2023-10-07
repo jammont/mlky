@@ -4,6 +4,8 @@ Sect objects maintain a dictionary of other Sect and Var objects
 import copy
 import logging
 
+import yaml
+
 from . import (
     Functions,
     Null,
@@ -181,6 +183,13 @@ class Sect:
             new.__dict__[key] = copy.deepcopy(val, memo)
         return new
 
+    def __delattr__(self, key):
+        self._debug(2, '__delattr__', f'Deleting self._sect[{key!r}]')
+        del self._sect[key]
+
+    def __delitem__(self, key):
+        delattr(self, key)
+
     def __repr__(self):
         """
         """
@@ -202,10 +211,9 @@ class Sect:
         return f"<{type(self).__name__} {self._name or '.'} (Attrs={attrs}, Sects={sects})>"
 
     @property
-    def _debugOffset(self):
+    def _offset(self):
         """
-        Padding to pretty print the debug statements into a hierarchical
-        structure
+        Offset in spaces to denote hierarchical level
         """
         return '  ' * (len(self._name.split('.')) - 1)
 
@@ -214,7 +222,7 @@ class Sect:
         Formats debug messages
         """
         if level in self._dbug or func in self._dbug:
-            Logger.debug(f'{self._debugOffset}<{type(self).__name__}>({self._name}).{func}() {msg}')
+            Logger.debug(f'{self._offset}<{type(self).__name__}>({self._name}).{func}() {msg}')
 
     def _patch(self, other, inplace=True):
         """
@@ -225,60 +233,45 @@ class Sect:
             self._debug(1, '_patch', 'Patching on deep copy')
 
         # Auto cast to Sect so merges are easier
-        for key, value in Sect(other).items(var=True):
+        for key, item in Sect(other).items(var=True):
             name = self._subkey(key)
             data = self.get(key, var=True)
 
-            if isinstance(value, Sect):
+            if isinstance(item, Sect):
                 # Patch two Sects together
                 if isinstance(data, Sect):
-                    self._debug(1, '_patch', f'Patching sub Sect [{key!r}] = {data} | {value}')
-                    self[key] = sect = data | value
+                    self._debug(1, '_patch', f'Patching sub Sect [{key!r}] = {data} | {item}')
+                    self[key] = data | item
                 # Replace with the other Sect
                 else:
-                    self._debug(1, '_patch', f'Adding sub Sect [{key!r}] = {value}')
-                    self[key] = sect = value
+                    self._debug(1, '_patch', f'Adding sub Sect [{key!r}] = {item}')
+                    self[key] = item
 
                 # Update the name to reflect potential changes in the hierarchy
-                self._debug(1, '_patch', f'└ Changing Sect name from {sect._name} to {name}')
-                sect._name = name
+                # sect = self[key]
+                # self._debug(1, '_patch', f'└ Changing Sect name from {sect._name} to {name}')
+                # print(f"Before: {sect.__dict__['_name']}")
+                # sect.__dict__['_name'] = name
+                # print(f"After: {sect.__dict__['_name']}")
 
             else:
                 # Log whether this is replacing or adding a Var, or if something borked
-                if isinstance(value, Var):
+                if isinstance(item, Var):
                     if isinstance(data, Var):
-                        self._debug(1, '_patch', f'Replacing Var [{key!r}] = {value!r}')
+                        self._debug(1, '_patch', f'Replacing Var [{key!r}] = {item!r}')
                     else:
-                        self._debug(1, '_patch', f'Adding Var [{key!r}] = {value!r}')
+                        self._debug(1, '_patch', f'Adding Var [{key!r}] = {item!r}')
                 else:
-                    Logger.error(f'A value other than a Sect or Var was found and should not have been: {type(value)} = {value!r}')
+                    Logger.error(f'A value other than a Sect or Var was found and should not have been: {type(item)} = {item!r}')
 
-                self[key] = var = value
+                self[key] = item
 
                 # Update the name to reflect potential changes in the hierarchy
-                self._debug(1, '_patch', f'└ Changing Var name from {var.name} to {name}')
-                var.name = name
+                # self._debug(1, '_patch', f'└ Changing Var name from {var.name} to {name}')
+                # var.name = name
 
-            # # Key exists and new value patches it
-            # if isinstance(data, Sect) and isinstance(value, (Sect, dict)):
-            #     self._debug(1, '_patch', f'Patching subsection [{key!r}] = {data} | {value}')
-            #     self[key] = sect = data | value
-            #
-            #     # Update the name to reflect potential changes in the hierarchy
-            #     self._debug(1, '_patch', f'  Changing Sect name from {sect._name} to {name}')
-            #     sect._name = name
-            #
-            # else:
-            #     # Other value is a Var and should outright replace
-            #     if isinstance(value, Var):
-            #         self._debug(1, '_patch', f'Patching key [{key!r}] = {value!r}')
-            #     else:
-            #         Logger.error(f'A value other than a Sect or Var was found and should not have been: {type(value)} = {value!r}')
-            #
-            #     self[key] = var = value
-            #     # Update the name to reflect potential changes in the hierarchy
-            #     self._debug(1, '_patch', f'  Changing Var name from {var.name} to {name}')
-            #     var.name = name
+        # Update the name to reflect potential changes in the hierarchy
+        self.updateNames()
 
         return self
 
@@ -452,7 +445,7 @@ class Sect:
         data = {}
         for key, item in self._sect.items():
             data[key] = value = self[key]
-            if isinstance(item, type(self)):
+            if isinstance(item, (type(self), Sect)):
                 self._debug(0, 'toDict', f'Converting child Sect [{key!r}].toDict()')
                 data[key] = value.toDict()
         return data
@@ -466,5 +459,54 @@ class Sect:
                 item.resetVars()
             elif isinstance(item, Var):
                 item.reset()
+            else:
+                Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
+
+    def dumpYaml(self, file=None, style=None, comments='inline', combine=True):
+        """
+        Parameters
+        ----------
+        format: bool, default=True
+            This function maintains a dump list of tuples where each tuple
+            defines the row information that feeds into utils.column_fmt(). If
+            `format` is true, returns the output of column_fmt, otherwise
+            returns the list of tuples
+        """
+        dump = ['generated:']
+        for key, item in self.items(var=True):
+            if isinstance(item, Sect):
+                dump.append(f'{item._offset}{key}:')
+                dump += item.dumpYaml(combine=False)[1:]
+            elif isinstance(item, Var):
+                line = item._offset + yaml.dump({key: item.value})[:-1]
+                dump.append(line)
+            else:
+                Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
+
+        if combine:
+            dump = '\n'.join(dump)
+
+        return dump
+
+    def updateNames(self):
+        """
+        Pings each child Sect to update the names of its children keys
+        """
+        for key, item in self.items(var=True):
+            name = self._subkey(key)
+
+            if isinstance(item, (type(self), Sect)):
+                if item._name != name:
+                    self._debug(0, 'updateNames', f'Updating Sect name from {item._name!r} to {name!r}')
+                    item.__dict__['_name'] = name
+
+                # Update children
+                item.updateNames()
+
+            elif isinstance(item, Var):
+                if item.name != name:
+                    self._debug(0, 'updateNames', f'Updating Var name from {item.name!r} to {name!r}')
+                    item.name = name
+
             else:
                 Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
