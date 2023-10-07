@@ -73,8 +73,8 @@ class Config(Sect):
         # Backwards compatible config = Config()
         if data is None:
             if local is True:
-                self = self.deepCopy()
                 self._debug(1, '__call__', 'No data, local True, creating deep copy of global instance')
+                self = self.deepCopy()
             else:
                 self._debug(1, '__call__', 'No data, local False, returning global instance')
             return self
@@ -112,10 +112,7 @@ class Config(Sect):
         """
         self._debug(0, 'patchSects', f'Patching using: {keys}')
 
-        new = Sect(
-            debug = self._dbug,
-            _repr = self._repr
-        )
+        new = Sect(debug=self._dbug)
         for key in keys:
             self._debug(0, 'patchSects', f'Patching with [{key!r}]')
             if key in self:

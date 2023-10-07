@@ -40,13 +40,16 @@ class nict(dict):
 
 
 class Sect:
-    # Default values for when a subclass isn't properly initialized
+    # Default values for when a subclass isn't fully initialized
     _name = ""
     _sect = nict()
-    _repr = 10
     _dbug = -1
+    _prnt = Null
 
-    def __init__(self, data={}, name="", defs={}, missing=False, debug=-1, _repr=10, **kwargs):
+    # Class defaults, change these manually via Sect._key = ...
+    _repr = 10 # __repr__ limiter to prevent prints being obnoxious
+
+    def __init__(self, data={}, name="", defs={}, missing=False, debug=-1, parent=Null, **kwargs):
         """
         Parameters
         ----------
@@ -77,10 +80,10 @@ class Sect:
 
         self.__dict__['_name'] = name
         self.__dict__['_data'] = data
-        self.__dict__['_defs'] = defs
+        self.__dict__['_defs'] = nict(defs)
         self.__dict__['_miss'] = missing
         self.__dict__['_dbug'] = set(debug)
-        self.__dict__['_repr'] = _repr
+        self.__dict__['_prnt'] = parent
         self.__dict__['_sect'] = nict()
 
         children = defs.get('.children', {})
@@ -171,7 +174,7 @@ class Sect:
         # TODO: Update
         return (type(self), (
             self.toDict(), self._name, self._defs,
-            self._miss, self._repr
+            self._miss
         ))
 
     def __deepcopy__(self, memo):
@@ -246,14 +249,6 @@ class Sect:
                 else:
                     self._debug(1, '_patch', f'Adding sub Sect [{key!r}] = {item}')
                     self[key] = item
-
-                # Update the name to reflect potential changes in the hierarchy
-                # sect = self[key]
-                # self._debug(1, '_patch', f'└ Changing Sect name from {sect._name} to {name}')
-                # print(f"Before: {sect.__dict__['_name']}")
-                # sect.__dict__['_name'] = name
-                # print(f"After: {sect.__dict__['_name']}")
-
             else:
                 # Log whether this is replacing or adding a Var, or if something borked
                 if isinstance(item, Var):
@@ -266,12 +261,8 @@ class Sect:
 
                 self[key] = item
 
-                # Update the name to reflect potential changes in the hierarchy
-                # self._debug(1, '_patch', f'└ Changing Var name from {var.name} to {name}')
-                # var.name = name
-
         # Update the name to reflect potential changes in the hierarchy
-        self.updateNames()
+        # self.updateNames()
 
         return self
 
@@ -296,41 +287,49 @@ class Sect:
 
         # Already a Var object, typically from unpickling
         if isinstance(value, Var):
-            self._debug(2, '_setdata', f'Input was Var, setting self[{key!r}] = {value}')
+            self._debug(2, '_setdata', f'Input was a Var, setting self[{key!r}] = {value}')
             self._sect[key] = value
+            value._update(key, self)
+
+        # Already a Sect, typically from patching
+        elif isinstance(value, (type(self), Sect)):
+            self._debug(2, '_setdata', f'Input was a Sect, setting self[{key!r}] = {value}')
+            self._sect[key] = value
+            value._update(key, self)
 
         # These types are Sects, everything else will be Vars
-        elif isinstance(value, (dict, list, tuple, Sect)):
+        elif isinstance(value, (dict, list, tuple)):
             self._debug(2, '_setdata', f'Setting new Sect [{key!r}] = Sect({value}, defs={defs})')
             self._sect[key] = Sect(
-                name  = name,
-                data  = value,
-                defs  = defs,
-                debug = self._dbug,
-                _repr = self._repr,
+                name   = name,
+                data   = value,
+                defs   = defs,
+                debug  = self._dbug,
+                parent = self,
                 **kwargs
             )
 
         # Key already exists, Var object instantiated
         elif isinstance(data, Var):
             # The Var obj will report any issues with setting the value (eg. failed checks)
-            data.value = value
             self._debug(2, '_setdata', f'Updating existing Var [{key!r}]: {data}.value = {value}')
+            data.value = value
 
         # Create as a Var object
         else:
+            self._debug(2, '_setdata', f'Setting new Var [{key!r}] = Var({value}, defs={defs}, kwargs={kwargs}))')
             self._sect[key] = Var(
-                name  = name,
-                key   = key,
-                value = value,
-                debug = self._dbug,
+                name   = name,
+                key    = key,
+                value  = value,
+                debug  = self._dbug,
+                parent = self,
                 required = defs.get('.required', False),
                 dtype    = defs.get('.type'    , Null ),
                 default  = defs.get('.default' , Null ),
                 checks   = defs.get('.checks'  , []   ),
                 **kwargs
             )
-            self._debug(2, '_setdata', f'Setting new Var [{key!r}] = Var({value}, defs={defs}, kwargs={kwargs}))')
 
     def _setdefs(self, key, defs):
         """
@@ -344,6 +343,42 @@ class Sect:
             defs = defs['.children']
 
         self._setdata(key, value, defs=defs, missing=True)
+
+    def _update(self, key, parent=Null):
+        """
+        Updates parameters of self relative to parent, then updates its children
+
+        Parameters
+        ----------
+        key: str
+            The key the parent is using for this child
+        parent: mlky.Sect, defaults=mlky.Null
+            The parent of this child
+        """
+        # Update self
+        internal = self.__dict__
+        internal['_prnt'] = parent
+        internal['_dbug'] = parent._dbug
+
+        # Log important changes
+        old = internal['_name']
+        new = parent._subkey(key)
+        if new is not Null and new != old:
+            self._debug(1, '_update', f'Updating name from {old!r} to {new}')
+            internal['_name'] = new
+
+        # Update children
+        self.deepUpdate()
+
+    def deepUpdate(self):
+        """
+        Calls _update() on each Var/Sect in self. This will bring parent/child
+        relationships in line with the current data, such as names and keys
+        """
+        for key, item in self.items(var=True):
+            if not isinstance(item, (type(self), Sect, Var)):
+                Logger.error(f'Should never encounter any type other Sect or Var, got: {type(item)} = {item}')
+            item._update(key, self)
 
     def deepCopy(self, memo=None):
         """
@@ -462,51 +497,90 @@ class Sect:
             else:
                 Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
 
-    def dumpYaml(self, file=None, style=None, comments='inline', combine=True):
+    def dumpYaml(self, string=True):
         """
+        Dumps this object as a YAML string.
+
+        Leverages the yaml.dump function to ensure 'key: value' are yaml
+        compatible
+
         Parameters
         ----------
-        format: bool, default=True
-            This function maintains a dump list of tuples where each tuple
-            defines the row information that feeds into utils.column_fmt(). If
-            `format` is true, returns the output of column_fmt, otherwise
-            returns the list of tuples
+        string: bool, default=True
+            Converts the dump to a compatible YAML string. If false, returns
+            the dump list which is a list of tuples where each tuple defines the
+            column values for a given row
+
+        Notes
+        -----
+        `string=False` will return the `dump` list. The `dump` list is a list
+        of tuples, ie.
+        ```
+        dump = [
+            (string, flag, dtype, sdesc), # Line 1
+            (string, flag, dtype, sdesc), # Line 2
+            ...
+        ]
+        ```
+        This list is in order. If the order changes, it risks becoming an
+        invalid YAML. This list is formatted as such so that it can be easily
+        passed to `mlky.utils.printTable()`. See `Sect.generateTemplate()` for
+        more information about this.
         """
+        def rowFromVar(var):
+            """
+            Reads a Var and prepares a tuple that represents the row as the
+            following columns:
+                (string, flag, dtype, sdesc)
+            where:
+                `string` is the "key: value" for this line
+                `flag` is one of:
+                    ` ` - Completely optional key
+                    `*` - Manually set value required
+                    `?` - Optional child key of some required parent section
+                `dtype` is the set data type for this key
+                `sdesc` is the short description
+
+            This list of tuples is then processed by utils.printTable() to the
+            columns in alignment as a valid yaml
+            """
+            value  = '\\' if var.value is Null else var.value
+            string = var._offset + yaml.dump({key: value})[:-1]
+
+            flag = ' '
+            if var.required:
+                flag = '*'
+            else:
+                parent = var.parent
+                while parent is not Null:
+                    if parent._defs.required:
+                        flag = '?'
+                        break
+                    parent = parent._prnt
+
+            return (string, flag)
+
         dump = ['generated:']
         for key, item in self.items(var=True):
             if isinstance(item, Sect):
                 dump.append(f'{item._offset}{key}:')
-                dump += item.dumpYaml(combine=False)[1:]
+                dump += item.dumpYaml(string=False)[1:]
             elif isinstance(item, Var):
-                line = item._offset + yaml.dump({key: item.value})[:-1]
-                dump.append(line)
+                dump.append(rowFromVar(item))
             else:
                 Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
 
-        if combine:
-            dump = '\n'.join(dump)
+        # if string:
+        #     dump = '\n'.join(dump)
 
         return dump
 
-    def updateNames(self):
+    def generateTemplate(self, file=None, style=None, comments='inline'):
         """
-        Pings each child Sect to update the names of its children keys
+        Generates a YAML template file
         """
-        for key, item in self.items(var=True):
-            name = self._subkey(key)
+        dump = self.dumpYaml()
 
-            if isinstance(item, (type(self), Sect)):
-                if item._name != name:
-                    self._debug(0, 'updateNames', f'Updating Sect name from {item._name!r} to {name!r}')
-                    item.__dict__['_name'] = name
-
-                # Update children
-                item.updateNames()
-
-            elif isinstance(item, Var):
-                if item.name != name:
-                    self._debug(0, 'updateNames', f'Updating Var name from {item.name!r} to {name!r}')
-                    item.name = name
-
-            else:
-                Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
+        if file:
+            with open(file, 'w') as f:
+                f.write(dump)

@@ -24,7 +24,18 @@ class Var:
     missing  = True
     required = False
 
-    def __init__(self, name, key, value=Null, default=Null, dtype=Null, required=False, missing=False, checks=[], debug=-1):
+    def __init__(self, name, key,
+        value    = Null,
+        default  = Null,
+        dtype    = Null,
+        required = False,
+        missing  = False,
+        checks   = [],
+        debug    = -1,
+        sdesc    = '',
+        ldesc    = '',
+        parent   = Null
+    ):
         """
         Variable container object
         """
@@ -39,6 +50,9 @@ class Var:
         self.missing  = missing
         self.checks   = checks
         self.debug    = set(debug)
+        self.sdesc    = sdesc
+        self.ldesc    = ldesc
+        self.parent   = parent
 
         # Set last as replace() and validate() will be called
         self.value    = value
@@ -183,3 +197,21 @@ class Var:
         """
         self._debug(0, 'reset', f'Resetting from {self.value} to {self.original}')
         self.value = self.original
+
+    def _update(self, key, parent):
+        """
+        Updates values of this Var given a new parent Sect
+        """
+        self.debug = parent._dbug
+
+        if key != self.key:
+            self._debug(1, 'update', f'Updating key from {self.key!r} to {key}')
+            self.key = key
+
+        old = self.name
+        new = parent._subkey(key)
+        if new is not Null and new != old:
+            self._debug(1, '_update', f'Updating name from {old!r} to {new}')
+            self.name = new
+
+        self.parent = parent
