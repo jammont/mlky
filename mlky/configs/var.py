@@ -89,19 +89,25 @@ class Var:
         return f'<Var({self.key}={self.value!r})>'
 
     @property
-    def _debugOffset(self):
+    def _offset(self):
         """
-        Padding to pretty print the debug statements into a hierarchical
-        structure
+        Offset in spaces to denote hierarchical level
         """
-        return '  ' * (len(self.name.split('.')) - 1)
+        name = len(self.name.split('.'))
+        if isinstance(self.key, int):
+            name += 1
+            key = 1
+        else:
+            key = len(self.key.split('.'))
+
+        return '  ' * (name - key)
 
     def _debug(self, level, func, msg):
         """
         Formats debug messages
         """
         if level in self.debug or func in self.debug:
-            Logger.debug(f'{self._debugOffset}<{type(self).__name__}>({self.name}).{func}() {msg}')
+            Logger.debug(f'{self._offset}<{type(self).__name__}>({self.name}).{func}() {msg}')
 
     def toDict(self):
         return self.__dict__
@@ -153,6 +159,7 @@ class Var:
         if self.missing:
             if self.required:
                 errors['required'] = 'This key is required to be manually set in the config'
+            self._debug(0, 'validate', f'This Var is missing and not required')
             return errors or True
 
         # Check the type before anything else
@@ -165,6 +172,7 @@ class Var:
 
             errors[check] = Functions.check(check, value, **kwargs)
 
+        # self._debug(0, 'validate', f'Errors reduced: {errors.reduce()}') # Very spammy, unsure about usefulness
         return errors or True
 
     def reset(self):
@@ -173,4 +181,5 @@ class Var:
         reset all Vars to trigger replacements after a Config finishes
         initialization
         """
+        self._debug(0, 'reset', f'Resetting from {self.value} to {self.original}')
         self.value = self.original
