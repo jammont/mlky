@@ -71,6 +71,10 @@ def replace(value):
     '/abc/1/2'
     """
     if isinstance(value, str):
+        # Special case for special Null syntax
+        if value == '\\':
+            return Null
+
         matches = re.findall(r"\${([\.\$\!].*?)}", value)
 
         for match in matches:
