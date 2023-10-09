@@ -447,8 +447,9 @@ class Sect:
     def keys(self):
         return self._sect.keys()
 
-    def values(self):
-        return self._sect.values()
+    def values(self, var=False):
+        self._debug(3, 'values', f'Returning values with var={var}')
+        return [self.get(key, var=var) for key in self]
 
     def items(self, var=False):
         """
