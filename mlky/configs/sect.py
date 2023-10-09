@@ -527,6 +527,27 @@ class Sect:
         passed to `mlky.utils.printTable()`. See `Sect.generateTemplate()` for
         more information about this.
         """
+        def rowFromSect(string, sect):
+            """
+            Reads a Sect and prepares a tuple that represents the row as the
+            following columns:
+                (string, flag, dtype, sdesc)
+            """
+            defs = sect._defs
+            flag = ' '
+            if defs.required:
+                flag = '!'
+            else:
+                parent = sect._prnt
+                while parent is not Null:
+                    if parent._defs.required:
+                        flag = '?'
+                        break
+                    parent = parent._prnt
+
+            return (string, flag)
+
+
         def rowFromVar(var):
             """
             Reads a Var and prepares a tuple that represents the row as the
@@ -536,7 +557,7 @@ class Sect:
                 `string` is the "key: value" for this line
                 `flag` is one of:
                     ` ` - Completely optional key
-                    `*` - Manually set value required
+                    `!` - Manually set value required
                     `?` - Optional child key of some required parent section
                 `dtype` is the set data type for this key
                 `sdesc` is the short description
@@ -549,7 +570,7 @@ class Sect:
 
             flag = ' '
             if var.required:
-                flag = '*'
+                flag = '!'
             else:
                 parent = var.parent
                 while parent is not Null:
@@ -560,10 +581,12 @@ class Sect:
 
             return (string, flag)
 
-        dump = ['generated:']
+        dump = [('generated:', ' ')]
         for key, item in self.items(var=True):
             if isinstance(item, Sect):
-                dump.append(f'{item._offset}{key}:')
+                # `key` is not in the item, create the "key: value" string for the row tuple
+                string = f'{item._offset}{key}:'
+                dump.append(rowFromSect(string, item))
                 dump += item.dumpYaml(string=False)[1:]
             elif isinstance(item, Var):
                 dump.append(rowFromVar(item))
