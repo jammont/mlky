@@ -1,11 +1,9 @@
 """
+Pretty printers
 """
-import os
-import pickle
-import yaml
 
 
-def column_fmt(iterable, enum=False, delimiter='=', offset=1, prepend='', print=print, columns={}, _i=0):
+def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', print=print, columns={}, _i=0):
     """
     Parameters can be set on a per column basis using the columns parameter. This is a
     dictionary of column indices as keys and the parameters for that column as the
@@ -95,7 +93,8 @@ def column_fmt(iterable, enum=False, delimiter='=', offset=1, prepend='', print=
 
     return formatted
 
-def align_print(iterable, enum=False, delimiter='=', offset=1, prepend='', print=print):
+
+def simpleTable(iterable, enum=False, delimiter='=', offset=1, prepend='', print=print):
     """
     Pretty prints an iterable in the form {key} = {value} such that the delimiter (=)
     aligns on each line
@@ -144,102 +143,3 @@ def align_print(iterable, enum=False, delimiter='=', offset=1, prepend='', print
         print(string)
 
     return fmt_list
-
-def mkdir(path):
-    """
-    Attempts to create directories for a given path
-    """
-    # Make sure this is a directory path
-    path, _ = os.path.split(path)
-
-    # Split into parts to reconstruct
-    split = path.split('/')
-
-    # Now reconstruct the path one step at a time and ensure the directory exists
-    for i in range(2, len(split)+1):
-        dir = '/'.join(split[:i])
-        if not os.path.exists(dir):
-            try:
-                os.mkdir(dir, mode=0o771)
-            except Exception as e:
-                Logger.exception(f'Failed to create directory {dir}')
-                raise e
-
-def load_string(string):
-    """
-    Loads a dict from a string
-    """
-    # File case
-    if os.path.exists(string):
-        with open(string, 'r') as file:
-            data = yaml.load(file, Loader=yaml.FullLoader)
-    # Raw string case
-    else:
-        data = yaml.load(string, Loader=yaml.FullLoader)
-
-    return data
-
-def load_pkl(file):
-    """
-    Loads data from a pickle
-
-    Parameters
-    ----------
-    file : str
-        Path to a Python pickle file to load
-
-    Returns
-    -------
-    any
-        The data object loaded from the pickle file
-    """
-    return pickle.load(open(file, 'rb'))
-
-def save_pkl(data, output):
-    """
-    Saves data to a file via pickle
-
-    Parameters
-    ----------
-    data: any
-        Any pickleable object
-    output : str
-        Path to a file to dump the data to via pickle
-    """
-    mkdir(output)
-    with open(output, 'wb') as file:
-        pickle.dump(data, file)
-
-def catch(func):
-    """
-    Decorator that protects the caller from an exception raised by the called function.
-
-    Parameters
-    ----------
-    func: function
-        The function to wrap
-
-    Returns
-    -------
-    _wrap: function
-        The wrapper function that calls func inside of a try/except block
-    """
-    def _wrap(*args, **kwargs):
-        """
-        Wrapper function
-
-        Parameters
-        ----------
-        *args: list
-            List of positional arguments for func
-        **kwargs: dict
-            Dict of keyword arguments for func
-        """
-        try:
-            func(*args, **kwargs)
-        except:
-            Logger.exception(f'Function <{func.__name__}> raised an exception')
-
-    # Need to pass the docs on for sphinx to generate properly
-    _wrap.__doc__ = func.__doc__
-    return _wrap
