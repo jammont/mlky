@@ -1,42 +1,16 @@
+"""
+Configuration
+"""
+import json
 import logging
-
-
-from . import Sect
-
-Logger = logging.getLogger('config.py')
+import os
 
 import yaml
 
-class utils:
-    @staticmethod
-    def loadDict(data):
-        """
-        Loads a dict from
-        """
-        import os
-        # Dicts and Sects return as-is
-        if isinstance(data, (dict, Sect, list, tuple)):
-            return data
-        elif isinstance(data, str):
-            # File case
-            if os.path.isfile(data):
-                _, ext = os.path.splitext(data)
-                if ext in ['.yml', '.yaml']:
-                    with open(data, 'r') as file:
-                        data = yaml.load(file, Loader=yaml.FullLoader)
-                elif ext in ['.json']:
-                    # TODO: Add json support
-                    ...
-            # String case
-            else:
-                try:
-                    # Raw yaml strings supported only
-                    data = yaml.load(data, Loader=yaml.FullLoader)
-                except:
-                    raise TypeError('Data input is a string but is not a file nor a yaml string')
-            return data
-        else:
-            raise TypeError(f'Data input is not a supported type, got {type(data)!r} expected one of: [filepath str, dict, Sect, list, tuple, yaml string]')
+from . import Sect
+
+
+Logger = logging.getLogger(__file__)
 
 
 class Config(Sect):
@@ -51,8 +25,8 @@ class Config(Sect):
         )
 
         # Config-specific private variables
-        self.__dict__['_dataPatch'] = patch
-        self.__dict__['_defsPatch'] = patch_defs
+        self.__dict__['_dataPatch'] = patch = self.parsePatch(patch)
+        self.__dict__['_defsPatch'] = self.parsePatch(patch_defs)
         self.__dict__['_raise']     = _raise
 
         # Patch the post-initialized state
@@ -80,7 +54,7 @@ class Config(Sect):
             return self
 
         # First parse the input data from one of the many supported types
-        data = utils.loadDict(data)
+        data = self.loadDict(data)
 
         # Local creates a new instance
         if local:
@@ -165,6 +139,70 @@ class Config(Sect):
             patch_defs = self._defsPatch
         )
         return self(**(parms | kwargs))
+
+    def loadDict(self, data):
+        """
+        Loads a dict from various options:
+            - Files:
+                - .json
+                - .yaml, .yml
+            - Strings:
+                - yaml formatted
+            - Returns these types as-is:
+                - type(self)
+                - Sect
+                - dict
+                - list
+                - tuple
+
+        Parameters
+        ----------
+        data: varies
+            One of the various supported types in the function description
+
+        Returns
+        -------
+        """
+        # Dicts and Sects return as-is
+        dtypes = [type(self), Sect, dict, list, tuple]
+        if isinstance(data, tuple(dtypes)):
+            return data
+
+        dtypes.append('yaml')
+        if isinstance(data, str):
+            # File case
+            if os.path.isfile(data):
+                _, ext = os.path.splitext(data)
+
+                if ext in ['.yml', '.yaml']:
+                    with open(data, 'r') as file:
+                        data = yaml.load(file, Loader=yaml.FullLoader)
+                elif ext in ['.json']:
+                    return json.loads(data)
+
+            else:
+                try:
+                    # Raw yaml strings supported only
+                    data = yaml.load(data, Loader=yaml.FullLoader)
+                except:
+                    raise TypeError('Data input is a string but is not a file nor a yaml string')
+
+            return data
+
+        else:
+            raise TypeError(f'Data input is not a supported type, got {type(data)!r} expected one of: {dtypes}')
+
+    @staticmethod
+    def parsePatch(patch):
+        """
+        Supports different patching syntax styles:
+            str : "key1<-key2<-keyN"
+            list: [key1, key2, keyN]
+        """
+        if isinstance(patch, str):
+            return patch.split('<-')
+        return patch
+
 
 # Transforms the module into a Singleton-like instance
 Config = Config()

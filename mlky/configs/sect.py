@@ -49,7 +49,15 @@ class Sect:
     # Class defaults, change these manually via Sect._key = ...
     _repr = 10 # __repr__ limiter to prevent prints being obnoxious
 
-    def __init__(self, data={}, name="", defs={}, missing=False, debug=-1, parent=Null, **kwargs):
+    def __init__(self,
+        data    = {},
+        name    = "",
+        defs    = {},
+        missing = False,
+        debug   = -1,
+        parent  = Null,
+        **kwargs
+    ):
         """
         Parameters
         ----------
@@ -206,11 +214,13 @@ class Sect:
                 attrs.append(key)
                 self._debug(4, '__repr__', '└ This key is an Attr')
 
+        # Shorten the length of these strings if there's too many keys
         if len(attrs) > self._repr:
             attrs = f'{attrs[:self._repr]}+[{len(attrs)-self._repr} more]'
         if len(sects) > self._repr:
             sects = f'{sects[:self._repr]}+[{len(sects)-self._repr} more]'
 
+        # TODO: Expanded formatted repr?
         return f"<{type(self).__name__} {self._name or '.'} (Attrs={attrs}, Sects={sects})>"
 
     @property
@@ -485,6 +495,13 @@ class Sect:
                 self._debug(0, 'toDict', f'Converting child Sect [{key!r}].toDict()')
                 data[key] = value.toDict()
         return data
+
+    def toList(self, var=False):
+        """
+        Alternative to .values() if that key were to ever be overwritten
+        """
+        self._debug(3, 'values', f'Returning values with var={var}')
+        return [self.get(key, var=var) for key in self]
 
     def resetVars(self):
         """
