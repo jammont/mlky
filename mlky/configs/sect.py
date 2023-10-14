@@ -12,6 +12,7 @@ from . import (
     Var
 )
 from ..utils import printTable
+from ..utils.templates import yamlHeader
 
 
 Logger = logging.getLogger(__file__)
@@ -670,7 +671,7 @@ class Sect:
         """
         Generates a YAML template file
         """
-        dump = self.dumpYaml(string=True)
+        dump = yamlHeader + self.dumpYaml(string=True)
 
         if file:
             with open(file, 'w') as f:

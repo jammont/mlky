@@ -192,7 +192,7 @@ class Var:
             if self.required:
                 errors['required'] = 'This key is required to be manually set in the config'
             self._debug(0, 'validate', f'This Var is missing and not required')
-            return errors or True
+            return errors
 
         # Check the type before anything else
         errors['type'] = self.checkType()
@@ -205,7 +205,7 @@ class Var:
             errors[check] = Functions.check(check, value, **kwargs)
 
         # self._debug(0, 'validate', f'Errors reduced: {errors.reduce()}') # Very spammy, unsure about usefulness
-        return errors or True
+        return errors
 
     def reset(self):
         """
