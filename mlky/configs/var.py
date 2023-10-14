@@ -186,7 +186,6 @@ class Var:
 
         # Custom dict, can use e.reduce() to remove e[check]=True
         errors = Errors()
-        return errors
 
         # Don't run any checks if the key was missing
         if self.missing:
