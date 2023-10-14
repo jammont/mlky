@@ -68,7 +68,7 @@ def cpu_count(*args):
 
 
 @register()
-def oneof(value, options, regex=False):
+def oneof(value, *options, regex=False):
     """
     Checks if a given value is one of a list of options
 

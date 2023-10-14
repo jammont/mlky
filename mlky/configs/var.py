@@ -93,6 +93,9 @@ class Var:
                 self._debug(2, '__setattr__', f'Replacing {value!r} with {new!r}')
                 value = new
 
+            # No longer missing if it's set
+            self.missing = False
+
             # Non-empty dict means errors found
             if self.validate(value).reduce():
                 Logger.error(f'Changing the value of this Var({self.name}) will cause validation to fail. See var.validate() for errors.')
@@ -198,11 +201,15 @@ class Var:
         errors['type'] = self.checkType()
 
         for check in self.checks:
+            args   = []
             kwargs = {}
             if isinstance(check, dict):
-                (check, kwargs), = list(check.items())
+                (check, args), = list(check.items())
+                if isinstance(args, dict):
+                    kwargs = args
+                    args = []
 
-            errors[check] = Functions.check(check, value, **kwargs)
+            errors[check] = Functions.check(check, value, *args, **kwargs)
 
         # self._debug(0, 'validate', f'Errors reduced: {errors.reduce()}') # Very spammy, unsure about usefulness
         return errors
