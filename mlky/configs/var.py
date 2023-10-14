@@ -123,6 +123,24 @@ class Var:
         if level in self.debug or func in self.debug:
             Logger.debug(f'{self._offset}<{type(self).__name__}>({self.name}).{func}() {msg}')
 
+    def _update(self, key, parent):
+        """
+        Updates values of this Var given a new parent Sect
+        """
+        self.debug = parent._dbug
+
+        if key != self.key:
+            self._debug(1, 'update', f'Updating key from {self.key!r} to {key}')
+            self.key = key
+
+        old = self.name
+        new = parent._subkey(key)
+        if new is not Null and new != old:
+            self._debug(1, '_update', f'Updating name from {old!r} to {new}')
+            self.name = new
+
+        self.parent = parent
+
     def toDict(self):
         return self.__dict__
 
@@ -168,6 +186,7 @@ class Var:
 
         # Custom dict, can use e.reduce() to remove e[check]=True
         errors = Errors()
+        return errors
 
         # Don't run any checks if the key was missing
         if self.missing:
@@ -198,20 +217,10 @@ class Var:
         self._debug(0, 'reset', f'Resetting from {self.value} to {self.original}')
         self.value = self.original
 
-    def _update(self, key, parent):
+    def applyDefinition(self, defs):
         """
-        Updates values of this Var given a new parent Sect
+        Applies values from a definitions object
         """
-        self.debug = parent._dbug
-
-        if key != self.key:
-            self._debug(1, 'update', f'Updating key from {self.key!r} to {key}')
-            self.key = key
-
-        old = self.name
-        new = parent._subkey(key)
-        if new is not Null and new != old:
-            self._debug(1, '_update', f'Updating name from {old!r} to {new}')
-            self.name = new
-
-        self.parent = parent
+        for key, val in defs.items():
+            self._debug(0, 'applyDefinition', f'{key} = {val!r}')
+            setattr(self, key, val)

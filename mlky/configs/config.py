@@ -14,26 +14,30 @@ Logger = logging.getLogger(__file__)
 
 
 class Config(Sect):
-    def __init__(self, data={}, patch=[], defs={}, patch_defs=[], debug=-1, validate=True, _raise=True, **kwargs):
+    def __init__(self, data={}, patch=[], defs={}, debug=-1, validate=True, _raise=True, **kwargs):
         """
         """
-        super().__init__(
-            data  = data,
-            defs  = defs,
-            debug = debug,
-            **kwargs
-        )
-
         # Config-specific private variables
-        self.__dict__['_dataPatch'] = patch = self.parsePatch(patch)
-        self.__dict__['_defsPatch'] = self.parsePatch(patch_defs)
-        self.__dict__['_raise']     = _raise
+        self.__dict__['_patch'] = patch = self.parsePatch(patch)
+        self.__dict__['_raise'] = _raise
 
-        # Patch the post-initialized state
+        # If patching, don't apply defs with creation
         if patch:
+            # Patching the post initialized state is easiest
+            super().__init__(data=data, debug=debug, **kwargs)
             self.patchSects(patch, inplace=True)
 
-    def __call__(self, data=None, patch=[], local=False, **kwargs):
+            # Apply defs post patching
+            self.applyDefinition(defs)
+        else:
+            super().__init__(
+                data  = data,
+                defs  = defs,
+                debug = debug,
+                **kwargs
+            )
+
+    def __call__(self, data=None, patch=[], defs={}, *, local=False, **kwargs):
         """
         Enables resetting the global instance Config or create local copies
         """
@@ -59,11 +63,11 @@ class Config(Sect):
         # Local creates a new instance
         if local:
             self._debug(1, '__call__', 'Creating new local instance of Config using different data')
-            self = type(self)(data, patch, **kwargs)
+            self = type(self)(data, patch, defs, **kwargs)
         else:
             # Otherwise update the global instance
             self._debug(1, '__call__', 'Reinitializing the global instance using new data')
-            self.__init__(data, patch, **kwargs)
+            self.__init__(data, patch, defs, **kwargs)
             self._debug(1, '__call__', 'The global instance has been reinitialized')
         return self
 
@@ -132,11 +136,10 @@ class Config(Sect):
         """
         self._debug(0, 'resetSects', 'This is a hard reset, be careful')
         parms = dict(
-            data       = self._data,
-            patch      = self._patch if keys is None else keys,
-            local      = not inplace,
-            defs       = self._defs,
-            patch_defs = self._defsPatch
+            data  = self._data,
+            patch = self._patch if keys is None else keys,
+            local = not inplace,
+            defs  = self._defs
         )
         return self(**(parms | kwargs))
 

@@ -11,6 +11,7 @@ from . import (
     Null,
     Var
 )
+from ..utils import printTable
 
 
 Logger = logging.getLogger(__file__)
@@ -88,17 +89,16 @@ class Sect:
 
         self.__dict__['_name'] = name
         self.__dict__['_data'] = data
-        self.__dict__['_defs'] = nict(defs)
         self.__dict__['_miss'] = missing
         self.__dict__['_dbug'] = set(debug)
         self.__dict__['_prnt'] = parent
         self.__dict__['_sect'] = nict()
 
-        children = defs.get('.children', {})
         if isinstance(data, dict):
             # if the input data is a dict, combine with kwargs to allow mix inputs eg. Sect({'a': 1}, b=2)
             for key, value in (kwargs | data).items():
-                self._setdata(key, value, defs=children.get(key, {}))
+                defs = defs.get(f'.{key}', {})
+                self._setdata(key, value, defs=defs)
 
         elif isinstance(data, (list, tuple)):
             for i, value in enumerate(data):
@@ -106,6 +106,9 @@ class Sect:
 
         elif isinstance(data, Sect):
             super().__setattr__('__dict__', data.deepCopy().__dict__)
+
+        if defs:
+            self.applyDefinition(defs)
 
     def __call__(self, other, inplace=True):
         """
@@ -327,32 +330,50 @@ class Sect:
 
         # Create as a Var object
         else:
-            self._debug(2, '_setdata', f'Setting new Var [{key!r}] = Var({value}, defs={defs}, kwargs={kwargs}))')
+            self._debug(2, '_setdata', f'Setting new Var [{key!r}] = Var({value}, kwargs={kwargs}))')
             self._sect[key] = Var(
                 name   = name,
                 key    = key,
                 value  = value,
                 debug  = self._dbug,
                 parent = self,
-                required = defs.get('.required', False),
-                dtype    = defs.get('.type'    , Null ),
-                default  = defs.get('.default' , Null ),
-                checks   = defs.get('.checks'  , []   ),
                 **kwargs
             )
+
+        # Always apply at the end if there's new defs, no harm if not
+        self._debug(2, '_setdata', f'[{key!r}] Applying defs: {defs}')
+        self.get(key, var=True).applyDefinition(defs)
 
     def _setdefs(self, key, defs):
         """
         Sets keys from a definitions dictionary
         """
         value = Null
-        if '.children' in defs:
+
+        # Children start with '.'
+        if any(key.startswith('.') for key in defs):
             value = {}
-            if defs.get('.type') == 'list':
-                value = [{} for _ in range(defs.get('.number', 1))]
-            defs = defs['.children']
+            if defs.get('dtype') == 'list':
+                value = [{} for _ in range(defs.get('repeat', 1))]
 
         self._setdata(key, value, defs=defs, missing=True)
+
+    def applyDefinition(self, defs):
+        """
+        Sect version
+        """
+        self.__dict__['_defs'] = defs
+
+        # Apply definitions to child keys, or create the key if missing
+        for key, val in defs.items():
+            if key.startswith('.'):
+                key = key[1:]
+                if key not in self:
+                    self._debug(0, 'applyDefinition', f'Adding missing key {key!r}')
+                    self._setdefs(key, val)
+                else:
+                    self._debug(0, 'applyDefinition', f'Applying defs to key {key!r}')
+                    self.get(key, var=True).applyDefinition(val)
 
     def _update(self, key, parent=Null):
         """
@@ -552,18 +573,23 @@ class Sect:
                 (string, flag, dtype, sdesc)
             """
             defs = sect._defs
+
+            sdesc = defs.get('sdesc', '')
+            dtype = defs.get('dtype', 'dict')
+
+            # ! = required, ? = optional under a required sect, ' ' = optional
             flag = ' '
-            if defs.required:
+            if defs.get('required'):
                 flag = '!'
             else:
                 parent = sect._prnt
                 while parent is not Null:
-                    if parent._defs.required:
+                    if parent._defs.get('required'):
                         flag = '?'
                         break
                     parent = parent._prnt
 
-            return (string, flag)
+            return (string, flag, dtype, sdesc)
 
 
         def rowFromVar(var):
@@ -583,8 +609,12 @@ class Sect:
             This list of tuples is then processed by utils.printTable() to the
             columns in alignment as a valid yaml
             """
-            value  = '\\' if var.value is Null else var.value
-            string = var._offset + yaml.dump({key: value})[:-1]
+            # Set value if set, otherwise use default, replace Null with `\`
+            value  = '\\'
+            if var.value is not Null:
+                value = var.value
+            elif var.default is not Null:
+                value = var.default
 
             flag = ' '
             if var.required:
@@ -592,35 +622,55 @@ class Sect:
             else:
                 parent = var.parent
                 while parent is not Null:
-                    if parent._defs.required:
+                    if parent._defs.get('required'):
                         flag = '?'
                         break
                     parent = parent._prnt
 
-            return (string, flag)
+            # Use yaml to dump this correctly
+            strings = yaml.dump({key: value}).split('\n')[:-1]
 
-        dump = [('generated:', ' ')]
+            # If this is a list value, there will be multiple lines
+            others = []
+            if len(strings) > 1:
+                offset = var._offset + '  '
+                others = [
+                    (offset+string, )
+                    for string in strings[1:]
+                ]
+
+            # The main key line
+            string = var._offset + strings[0]
+
+            return [(string, flag, var.dtype or '', var.sdesc)] + others
+
+
+        dump = [('generated:', 'K', 'dtype', 'Short description')]
         for key, item in self.items(var=True):
             if isinstance(item, Sect):
                 # `key` is not in the item, create the "key: value" string for the row tuple
-                string = f'{item._offset}{key}:'
-                dump.append(rowFromSect(string, item))
+                dump.append(rowFromSect(f'{item._offset}{key}:', item))
                 dump += item.dumpYaml(string=False)[1:]
             elif isinstance(item, Var):
-                dump.append(rowFromVar(item))
+                dump += rowFromVar(item)
             else:
                 Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
 
-        # if string:
-        #     dump = '\n'.join(dump)
-
+        if string:
+            return '\n'.join(
+                printTable(dump, columns = {
+                        0: {'delimiter': '#'},
+                        1: {'delimiter': '|'},
+                    }, print=None
+                )
+            )
         return dump
 
-    def generateTemplate(self, file=None, style=None, comments='inline'):
+    def generateTemplate(self, file=None):
         """
         Generates a YAML template file
         """
-        dump = self.dumpYaml()
+        dump = self.dumpYaml(string=True)
 
         if file:
             with open(file, 'w') as f:

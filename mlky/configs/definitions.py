@@ -3,9 +3,9 @@ Utilities for the `definitions` files
 """
 import click
 
-from .sect import nict
+from .sect   import nict
 from ..utils import (
-    column_fmt,
+    printTable,
     load_string
 )
 
@@ -81,7 +81,7 @@ def format_defs(defs, level='', reqd=False):
         type        = The required type for the key, eg. int, str, bool
         description = Description of the key
 
-    Using this the MilkyLib.utils.column_fmt can format these tuples of four strings
+    Using this the MilkyLib.utils.printTable can format these tuples of four strings
     into strings of four aligned columns. For example:
 
     >>> defs  =
@@ -91,7 +91,7 @@ def format_defs(defs, level='', reqd=False):
      ('  key1: 0', ' ', 'int', '...'),
      ('  Sect:', '*', 'dict', '...'),
      ('    key2: f', '+', 'str', '...')]
-    >>> column_fmt(write, columns={0: {'delimiter': '#', 'offset': 4},
+    >>> printTable(write, columns={0: {'delimiter': '#', 'offset': 4},
     ...                            1: {'delimiter': '|', 'offset': 1}})
     Default        # ? | Type | Description
       key1: 0      #   | int  | ...
@@ -259,7 +259,7 @@ def generate(defs=None, style='full', comments='inline', file=None):
 
     lines = [Comments['header']]
     if comments == 'inline':
-        lines += column_fmt(instructions,
+        lines += printTable(instructions,
             print   = None,
             columns = {
                 0: {'delimiter': '#', 'offset': 8},
@@ -271,7 +271,7 @@ def generate(defs=None, style='full', comments='inline', file=None):
         for line in instructions:
             if len(line) > 1:
                 offset = len(line[0]) - len(line[0].lstrip())
-                fmt,   = column_fmt([line[1:]], delimiter='|', prepend=' ' * offset + '# ', print=None)
+                fmt,   = printTable([line[1:]], delimiter='|', prepend=' ' * offset + '# ', print=None)
                 lines.append(fmt)
             lines.append(line[0])
 

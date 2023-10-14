@@ -72,7 +72,7 @@ def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', print=
     # Check if there are any more columns to format
     if any([len(item) > 1 for item in formatted]):
         # Only delimiter and offset are carried forward, other parameters disabled
-        formatted = column_fmt(formatted,
+        formatted = printTable(formatted,
             delimiter = delimiter,
             offset    = offset,
             enum      = False,
