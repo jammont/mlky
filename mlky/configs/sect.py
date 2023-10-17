@@ -48,7 +48,7 @@ class Sect:
     _dbug = -1
     _prnt = Null
 
-    # Class defaults, change these manually via Sect._key = ...
+    # Class defaults, change these manually via Sect.__dict__[key] = ...
     _repr = 10 # __repr__ limiter to prevent prints being obnoxious
 
     def __init__(self,
@@ -359,23 +359,6 @@ class Sect:
 
         self._setdata(key, value, defs=defs, missing=True)
 
-    def applyDefinition(self, defs):
-        """
-        Sect version
-        """
-        self.__dict__['_defs'] = defs
-
-        # Apply definitions to child keys, or create the key if missing
-        for key, val in defs.items():
-            if key.startswith('.'):
-                key = key[1:]
-                if key not in self:
-                    self._debug(0, 'applyDefinition', f'Adding missing key {key!r}')
-                    self._setdefs(key, val)
-                else:
-                    self._debug(0, 'applyDefinition', f'Applying defs to key {key!r}')
-                    self.get(key, var=True).applyDefinition(val)
-
     def _update(self, key, parent=Null):
         """
         Updates parameters of self relative to parent, then updates its children
@@ -401,6 +384,23 @@ class Sect:
 
         # Update children
         self.deepUpdate()
+
+    def applyDefinition(self, defs):
+        """
+        Applies a definitions object against this Sect
+        """
+        self.__dict__['_defs'] = defs
+
+        # Apply definitions to child keys, or create the key if missing
+        for key, val in defs.items():
+            if key.startswith('.'):
+                key = key[1:]
+                if key not in self:
+                    self._debug(0, 'applyDefinition', f'Adding missing key {key!r}')
+                    self._setdefs(key, val)
+                else:
+                    self._debug(0, 'applyDefinition', f'Applying defs to key {key!r}')
+                    self.get(key, var=True).applyDefinition(val)
 
     def deepUpdate(self):
         """

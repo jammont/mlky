@@ -10,10 +10,10 @@ from mlky.configs.var import Var
 
 
 @pytest.mark.parametrize("name,key,value,dtype,checks,errors", [
-    ('.1', 'one'  , 1, 'None', [{'oneof': {'options': [0, 1, 2]}}], {}),
-    ('.2', 'two'  , 2, 'any' , [{'oneof': {'options': [0, 2, 4]}}], {}),
-    ('.3', 'three', 3, 'int' , [{'oneof': {'options': [0, 2, 4]}}], {'oneof': 'Invalid option: 3, should be one of: [0, 2, 4]'}),
-    ('.4', 'four' , 4, 'str' , [{'oneof': {'options': [0, 4, 8]}}], {'type': "Wrong type: Expected <'str'> Got <class 'int'>"})
+    ('.1', 'one'  , 1, 'None', [{'oneof': [0, 1, 2]}], {}),
+    ('.2', 'two'  , 2, 'any' , [{'oneof': [0, 2, 4]}], {}),
+    ('.3', 'three', 3, 'int' , [{'oneof': [0, 2, 4]}], {'oneof': 'Invalid option: 3, should be one of: (0, 2, 4)'}),
+    ('.4', 'four' , 4, 'str' , [{'oneof': [0, 4, 8]}], {'type': "Wrong type: Expected <'str'> Got <class 'int'>"})
 ])
 def test_Var(name, key, value, dtype, checks, errors):
     """
