@@ -52,12 +52,14 @@ def _cli(ctx, version, path):
     """\
     MLky configuration commands
     """
+    import mlky
+
     if ctx.invoked_subcommand is None:
         if version:
-            click.echo(__version__)
+            click.echo(mlky.__version__)
 
         if path:
-            click.echo(__path__[0])
+            click.echo(mlky.__path__[0])
 
 #%%
 @_cli.command(name="generate")
