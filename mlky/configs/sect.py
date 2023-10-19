@@ -182,6 +182,9 @@ class Sect:
     def __iter__(self):
         return iter(self._sect)
 
+    def __len__(self):
+        return len(self._sect)
+
     def __reduce__(self):
         # TODO: Update
         return (type(self), (
