@@ -5,6 +5,8 @@ import json
 import logging
 import os
 
+from pathlib import Path
+
 import yaml
 
 from . import Sect
@@ -151,6 +153,7 @@ class Config(Sect):
                 - .yaml, .yml
             - Strings:
                 - yaml formatted
+                - pathlib.Path
             - Returns these types as-is:
                 - type(self)
                 - Sect
@@ -172,7 +175,7 @@ class Config(Sect):
             return data
 
         dtypes.append('yaml')
-        if isinstance(data, str):
+        if isinstance(data, (str, Path)):
             # File case
             if os.path.isfile(data):
                 _, ext = os.path.splitext(data)
