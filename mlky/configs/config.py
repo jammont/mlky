@@ -55,6 +55,7 @@ class Config(Sect):
             if local is True:
                 self._debug(1, '__call__', 'No data, local True, creating deep copy of global instance')
                 self = self.deepCopy()
+                self._debug(1, '__call__', 'Returning deep copy')
             else:
                 self._debug(1, '__call__', 'No data, local False, returning global instance')
             return self
@@ -66,6 +67,7 @@ class Config(Sect):
         if local:
             self._debug(1, '__call__', 'Creating new local instance of Config using different data')
             self = type(self)(data, patch, defs, **kwargs)
+            self._debug(1, '__call__', 'Returning new, different local instance')
         else:
             # Otherwise update the global instance
             self._debug(1, '__call__', 'Reinitializing the global instance using new data')
@@ -114,7 +116,7 @@ class Config(Sect):
 
         return new
 
-    def resetSects(self, keys=None, inplace=False, **kwargs):
+    def resetSects(self, keys=None, **kwargs):
         """
         Resets to the last initialized state. This is a hard reset, any changes
         to the config since last initialization will be lost. This is because
@@ -127,9 +129,6 @@ class Config(Sect):
         keys: list, default=None
             Patch keys list. `None` defaults to the last used. Empty list `[]`
             will remove patching altogether
-        inplace: bool, default=False
-            If true, reset the global instance. If false, reset as a local
-            instance. Can also pass local=bool, equivalent to __call__'s local
 
         Returns
         -------
@@ -140,7 +139,6 @@ class Config(Sect):
         parms = dict(
             data  = self._data,
             patch = self._patch if keys is None else keys,
-            local = not inplace,
             defs  = self._defs
         )
         return self(**(parms | kwargs))

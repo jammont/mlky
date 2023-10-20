@@ -87,7 +87,7 @@ class Var:
         """
         if key == 'value':
             # Always call to see if this value should be replaced
-            new = Functions.check('config.replace', value)
+            new = self.replace(value)
             if new is not value:
                 self.original = value
                 self._debug(2, '__setattr__', f'Replacing {value!r} with {new!r}')
@@ -230,3 +230,19 @@ class Var:
         for key, val in defs.items():
             self._debug(0, 'applyDefinition', f'{key} = {val!r}')
             setattr(self, key, val)
+
+    def replace(self, value):
+        """
+        mlky replacement magic to support independent Sect instances
+
+        Work in progress
+        """
+        # Find the root parent
+        parent = self.parent
+        while parent._prnt:
+            parent = parent._prnt
+
+        # TODO: This is broken, just default to the global instance until further research
+        parent = None
+
+        return Functions.check('config.replace', value, parent)

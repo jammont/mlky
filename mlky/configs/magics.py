@@ -16,7 +16,7 @@ Logger = logging.getLogger(__file__)
 
 
 @register('config.replace')
-def replace(value):
+def replace(value, instance=None):
     """
     Replaces format signals in strings with values from the config relative to
     its inheritance structure.
@@ -26,6 +26,8 @@ def replace(value):
     value: str
         Matches roughly to ${config.*} in the string and replaces them with the
         corrosponding config value. See notes the regex for accuracy.
+    instance: Sect, defaults=None
+        Instance to use for value lookups. Defaults to the global instance
 
     Returns
     -------
@@ -86,7 +88,7 @@ def replace(value):
                     Logger.error(f'Keys path provided is invalid, returning without replacement: {keys!r}')
                     return value
 
-                data = Config()
+                data = instance or Config
                 for key in keys[1:]:
                     data = data.__getattr__(key)
 
