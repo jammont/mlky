@@ -31,13 +31,12 @@ def test_init():
     assert cfg3 == data, 'Local initialization broke the global instance'
 
     data = ['j', 'k', 'l']
-    answ = {0: 'j', 1: 'k', 2: 'l'} # Sects are always dicts, converts lists to dicts
     cfg4 = Config(data)
     assert cfgL == altL, 'Local initialization did not persist global instance reinitialization'
-    assert cfg1 == answ, 'Reinitialized config did not match new input'
-    assert cfg2 == answ, 'Reinitialized config did not match new input'
-    assert cfg3 == answ, 'Reinitialized config did not match new input'
-    assert cfg4 == answ, 'Reinitialized config did not match new input'
+    assert cfg1 == data, 'Reinitialized config did not match new input'
+    assert cfg2 == data, 'Reinitialized config did not match new input'
+    assert cfg3 == data, 'Reinitialized config did not match new input'
+    assert cfg4 == data, 'Reinitialized config did not match new input'
 
     # return True
 

@@ -1,13 +1,12 @@
 """
-Tests the mlky Sect and nict classes
+Tests the mlky Sect and NullDict classes
 """
 import pickle
 
 import pytest
 
-from mlky import Null
-from mlky.configs.sect import (
-    nict,
+from mlky import (
+    Null,
     Sect
 )
 
@@ -91,28 +90,5 @@ def test_operators():
     assert base < {'a': 1} == {'a': 1}
     assert base | {'a': 1} == {'a': 1}
     assert base | {'a': 1} | {'b': 2} == {'a': 1, 'b': 2}
-
-    # return True
-
-
-def test_nict():
-    """
-    """
-    n = nict()
-    assert n.test         == Null
-    assert n.test.t       == Null
-    assert n.test['t']    == Null
-    assert n['test']      == Null
-    assert n['test'].t    == Null
-    assert n['test']['t'] == Null
-
-    n = nict({'a': 1})
-    assert n.a    == 1
-    assert n['a'] == 1
-
-    n = nict(b=2)
-    assert n.b    == 2
-    assert n['b'] == 2
-    assert n.a    == Null
 
     # return True

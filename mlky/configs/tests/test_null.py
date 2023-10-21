@@ -1,7 +1,10 @@
 """
 Tests the mlky Null class
 """
-from mlky import Null
+from mlky import (
+    Null,
+    NullDict
+)
 
 
 def test_comparisons():
@@ -49,5 +52,28 @@ def test_warnings(caplog):
     Null._warn = False
     Null.test  = 1
     assert caplog.records == [], 'Warnings failed to be disabled'
+
+    # return True
+
+
+def test_NullDict():
+    """
+    """
+    n = NullDict()
+    assert n.test         == Null
+    assert n.test.t       == Null
+    assert n.test['t']    == Null
+    assert n['test']      == Null
+    assert n['test'].t    == Null
+    assert n['test']['t'] == Null
+
+    n = NullDict({'a': 1})
+    assert n.a    == 1
+    assert n['a'] == 1
+
+    n = NullDict(b=2)
+    assert n.b    == 2
+    assert n['b'] == 2
+    assert n.a    == Null
 
     # return True

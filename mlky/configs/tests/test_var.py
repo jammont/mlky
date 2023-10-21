@@ -5,8 +5,10 @@ import pickle
 
 import pytest
 
-from mlky import Sect
-from mlky.configs.var import Var
+from mlky import (
+    Sect,
+    Var
+)
 
 
 @pytest.mark.parametrize("name,key,value,dtype,checks,errors", [
