@@ -1,8 +1,14 @@
 """
-Sect objects maintain a dictionary of other Sect and Var objects
+The core of mlky: The Sect class.
+
+This class acts like a fault-tolerant dict with dot notational syntax.
 """
 import copy
+import json
 import logging
+import os
+
+from pathlib import Path
 
 import yaml
 
@@ -47,6 +53,7 @@ class Sect:
     _sect = nict()
     _dbug = -1
     _prnt = Null
+    _type = 'Dict'
 
     # Class defaults, change these manually via Sect.__dict__[key] = ...
     _repr = 10 # __repr__ limiter to prevent prints being obnoxious
@@ -88,6 +95,9 @@ class Sect:
         if isinstance(debug, int):
             debug = range(0, debug+1)
 
+        # Parse the input data from a supported type
+        data = self.loadDict(data)
+
         self.__dict__['_name'] = name
         self.__dict__['_data'] = data
         self.__dict__['_miss'] = missing
@@ -102,6 +112,8 @@ class Sect:
                 self._setdata(key, value, defs=defs)
 
         elif isinstance(data, (list, tuple)):
+            # Flag that this is a list-type Sect to change some downstream behaviours
+            self.__dict__['_type'] = 'List'
             for i, value in enumerate(data):
                 self._setdata(i, value, defs=defs)
 
@@ -121,13 +133,16 @@ class Sect:
 
     def __eq__(self, other):
         if self._dbug:
-            Logger.debug(f'Comparing to {type(other)}: {other}')
-        data = self.toDict()
-        if isinstance(other, dict):
-            return data == other
-        elif isinstance(other, (type(self), Sect)):
-            return data == other.toDict()
-        return False
+            self._debug(1, '__eq__', f'Comparing to type: {type(other)} = {other!r}')
+
+        # Convert this to its primitive type for safer comparisons
+        data = self.toPrimitive()
+
+        # Same if compared to another Sect
+        if isinstance(other, (type(self), Sect)):
+            other = other.toPrimitive()
+
+        return data == other
 
     def __or__(self, other):
         """
@@ -167,6 +182,9 @@ class Sect:
         # _sect starts as a nict and sometimes turns into a Sect, .get accounts for both
         val = self._sect.get(key, other=Null, var=True)
         if isinstance(val, Var):
+            if val.value is Null:
+                self._debug(3, '__getattr__', f'Returning {val}.default')
+                return val.default
             self._debug(3, '__getattr__', f'Returning {val}.value')
             return val.value
 
@@ -188,7 +206,7 @@ class Sect:
     def __reduce__(self):
         # TODO: Update
         return (type(self), (
-            self.toDict(), self._name, self._defs,
+            self.toPrimitive(), self._name, self._defs,
             self._miss
         ))
 
@@ -392,7 +410,7 @@ class Sect:
         """
         Applies a definitions object against this Sect
         """
-        self.__dict__['_defs'] = defs
+        self.__dict__['_defs'] = defs = self.loadDict(defs)
 
         # Apply definitions to child keys, or create the key if missing
         for key, val in defs.items():
@@ -510,29 +528,57 @@ class Sect:
                 return True
         return False
 
-    def toDict(self):
+    def toDict(self, deep=True):
         """
+        Converts the Sect to a dict object
+
+        Parameters
+        ----------
+        deep: bool, defaults=True
+            Will convert child Sects to primitive types as well
         """
         data = {}
         for key, item in self._sect.items():
-            data[key] = value = self[key]
-            if isinstance(item, (type(self), Sect)):
-                self._debug(0, 'toDict', f'Converting child Sect [{key!r}].toDict()')
-                data[key] = value.toDict()
+            value = self[key]
+            data[key] = value
+            if deep and isinstance(item, Sect):
+                self._debug(0, 'toDict', f'Converting child Sect [{key!r}].toPrimitive()')
+                data[key] = value.toPrimitive()
         return data
 
-    def toList(self, var=False):
+    def toList(self, deep=True):
         """
-        Alternative to .values() if that key were to ever be overwritten
+        Converts the sect to a list object
+
+        Parameters
+        ----------
+        deep: bool, defaults=True
+            Will convert child Sects to primitive types as well
         """
-        self._debug(3, 'values', f'Returning values with var={var}')
-        return [self.get(key, var=var) for key in self]
+        data = []
+        for key, item in self._sect.items():
+            value = self[key]
+            data.append(value)
+            if deep and isinstance(item, Sect):
+                self._debug(0, 'toList', f'Converting child Sect [{key!r}].toPrimitive()')
+                data[-1] = value.toPrimitive()
+        return data
+
+    def toPrimitive(self):
+        """
+        Determines what type of primitive type to convert this Sect to
+
+        Current types:
+            dict
+            list
+        """
+        return getattr(self, f'to{self._type}')()
 
     def resetVars(self):
         """
         Runs reset on each Var
         """
-        for key, item in self.items(var=True):
+        for key, item in self._sect.items():
             if isinstance(item, Sect):
                 item.resetVars()
             elif isinstance(item, Var):
@@ -679,3 +725,56 @@ class Sect:
         if file:
             with open(file, 'w') as f:
                 f.write(dump)
+
+    def loadDict(self, data):
+        """
+        Loads a dict from various options:
+            - Files:
+                - .json
+                - .yaml, .yml
+            - Strings:
+                - yaml formatted
+                - pathlib.Path
+            - Returns these types as-is:
+                - type(self)
+                - Sect
+                - dict
+                - list
+                - tuple
+
+        Parameters
+        ----------
+        data: varies
+            One of the various supported types in the function description
+
+        Returns
+        -------
+        """
+        # Dicts and Sects return as-is
+        dtypes = [type(self), Sect, dict, list, tuple]
+        if isinstance(data, tuple(dtypes)):
+            return data
+
+        dtypes += ['yaml', 'json', 'pathlib.Path']
+        if isinstance(data, (str, Path)):
+            # File case
+            if os.path.isfile(data):
+                _, ext = os.path.splitext(data)
+
+                if ext in ['.yml', '.yaml']:
+                    with open(data, 'r') as file:
+                        data = yaml.load(file, Loader=yaml.FullLoader)
+                elif ext in ['.json']:
+                    return json.loads(data)
+
+            else:
+                try:
+                    # Raw yaml strings supported only
+                    data = yaml.load(data, Loader=yaml.FullLoader)
+                except:
+                    raise TypeError('Data input is a string but is not a file nor a yaml string')
+
+            return data
+
+        else:
+            raise TypeError(f'Data input is not a supported type, got {type(data)!r} expected one of: {dtypes}')

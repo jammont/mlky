@@ -1,11 +1,13 @@
 """
-Configuration
-"""
-import json
-import logging
-import os
+The main configuration class of mlky
 
-from pathlib import Path
+The primary features of this class are:
+    1. Manage the patching of top-level sections
+    2. Act as a Singleton-like instance
+
+Beyond that, Config is simply a Sect object
+"""
+import logging
 
 import yaml
 
@@ -59,9 +61,6 @@ class Config(Sect):
             else:
                 self._debug(1, '__call__', 'No data, local False, returning global instance')
             return self
-
-        # First parse the input data from one of the many supported types
-        data = self.loadDict(data)
 
         # Local creates a new instance
         if local:
@@ -142,59 +141,6 @@ class Config(Sect):
             defs  = self._defs
         )
         return self(**(parms | kwargs))
-
-    def loadDict(self, data):
-        """
-        Loads a dict from various options:
-            - Files:
-                - .json
-                - .yaml, .yml
-            - Strings:
-                - yaml formatted
-                - pathlib.Path
-            - Returns these types as-is:
-                - type(self)
-                - Sect
-                - dict
-                - list
-                - tuple
-
-        Parameters
-        ----------
-        data: varies
-            One of the various supported types in the function description
-
-        Returns
-        -------
-        """
-        # Dicts and Sects return as-is
-        dtypes = [type(self), Sect, dict, list, tuple]
-        if isinstance(data, tuple(dtypes)):
-            return data
-
-        dtypes.append('yaml')
-        if isinstance(data, (str, Path)):
-            # File case
-            if os.path.isfile(data):
-                _, ext = os.path.splitext(data)
-
-                if ext in ['.yml', '.yaml']:
-                    with open(data, 'r') as file:
-                        data = yaml.load(file, Loader=yaml.FullLoader)
-                elif ext in ['.json']:
-                    return json.loads(data)
-
-            else:
-                try:
-                    # Raw yaml strings supported only
-                    data = yaml.load(data, Loader=yaml.FullLoader)
-                except:
-                    raise TypeError('Data input is a string but is not a file nor a yaml string')
-
-            return data
-
-        else:
-            raise TypeError(f'Data input is not a supported type, got {type(data)!r} expected one of: {dtypes}')
 
     @staticmethod
     def parsePatch(patch):
