@@ -78,3 +78,20 @@ class NullType(type):
 
 class Null(metaclass=NullType):
     ...
+
+
+class NullDict(dict):
+    """
+    Simple dict extension that enables dot notation and defaults to Null when an
+    item/attribute is missing
+    """
+    def __deepcopy__(self, memo):
+        new = type(self)(self)
+        memo[id(self)] = new
+        return new
+
+    def __getattr__(self, key):
+        return super().get(key, Null)
+
+    def __getitem__(self, key):
+        return self.__getattr__(key)

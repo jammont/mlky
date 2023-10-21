@@ -15,6 +15,8 @@ import yaml
 from . import (
     Functions,
     Null,
+    NullDict,
+    NullType,
     Var
 )
 from ..utils import printTable
@@ -24,33 +26,10 @@ from ..utils.templates import yamlHeader
 Logger = logging.getLogger(__file__)
 
 
-class nict(dict):
-    """
-    Simple dict extension that enables dot notation and defaults to Null when an
-    item/attribute is missing Null+dict=nict
-    """
-    def __deepcopy__(self, memo):
-        new = type(self)(self)
-        memo[id(self)] = new
-        return new
-
-    def __getattr__(self, key):
-        return super().get(key, Null)
-
-    def __getitem__(self, key):
-        return self.__getattr__(key)
-
-    def get(self, key, other=None, **kwargs):
-        val = self[key]
-        if val is not Null:
-            return val
-        return other
-
-
 class Sect:
     # Default values for when a subclass isn't fully initialized
     _name = ""
-    _sect = nict()
+    _sect = NullDict()
     _dbug = -1
     _prnt = Null
     _type = 'Dict'
@@ -103,7 +82,7 @@ class Sect:
         self.__dict__['_miss'] = missing
         self.__dict__['_dbug'] = set(debug)
         self.__dict__['_prnt'] = parent
-        self.__dict__['_sect'] = nict()
+        self.__dict__['_sect'] = NullDict()
 
         if isinstance(data, dict):
             # if the input data is a dict, combine with kwargs to allow mix inputs eg. Sect({'a': 1}, b=2)
@@ -133,7 +112,7 @@ class Sect:
 
     def __eq__(self, other):
         if self._dbug:
-            self._debug(1, '__eq__', f'Comparing to type: {type(other)} = {other!r}')
+            self._log(1, '__eq__', f'Comparing to type: {type(other)} = {other!r}')
 
         # Convert this to its primitive type for safer comparisons
         data = self.toPrimitive()
@@ -176,19 +155,40 @@ class Sect:
     def __setitem__(self, key, value):
         self._setdata(key, value)
 
-    def __getattr__(self, key):
+    def __getattr__(self, key, var=False, default=True):
         """
+        Interfaces with _sect to retrieve the Var and Sect child objects
+        _sect should always be a NullDict
+
+        Parameters are accessible via the .get() method
+
+        Parameters
+        ----------
+        key: str
+            Attribute name to look up
+        var: bool, defaults=False
+            Return the item as a Var
+        default: bool, defaults=True
+            Return a Var's default value if available
         """
-        # _sect starts as a nict and sometimes turns into a Sect, .get accounts for both
-        val = self._sect.get(key, other=Null, var=True)
+        val = self._sect[key]
+
         if isinstance(val, Var):
-            if val.value is Null:
-                self._debug(3, '__getattr__', f'Returning {val}.default')
+            if var:
+                self._log(3, '__getattr__', f'[{key!r}] Returning as Var: {val}')
+                return val
+
+            if default and val.value is Null:
+                self._log(3, '__getattr__', f'[{key!r}] Returning {val}.default')
                 return val.default
-            self._debug(3, '__getattr__', f'Returning {val}.value')
+
+            self._log(3, '__getattr__', f'[{key!r}] Returning {val}.value')
             return val.value
 
-        self._debug(3, '__getattr__', f'Returning value: {val!r}')
+        if not isinstance(val, (Sect, NullType)):
+            self._log('e', '__getattr__', f'Item of _sect is not a Var, Sect, or Null type: [{key!r}] = {type(val)} {val}')
+
+        self._log(3, '__getattr__', f'[{key!r}] Returning value: {val!r}')
         return val
 
     def __getitem__(self, key):
@@ -215,12 +215,12 @@ class Sect:
         new = cls.__new__(cls)
         memo[id(self)] = new
         for key, val in self.__dict__.items():
-            self._debug(1, '__deepcopy__', f'Deep copying __dict__[{key!r}] = {val!r}')
+            self._log(1, '__deepcopy__', f'Deep copying __dict__[{key!r}] = {val!r}')
             new.__dict__[key] = copy.deepcopy(val, memo)
         return new
 
     def __delattr__(self, key):
-        self._debug(2, '__delattr__', f'Deleting self._sect[{key!r}]')
+        self._log(2, '__delattr__', f'Deleting self._sect[{key!r}]')
         del self._sect[key]
 
     def __delitem__(self, key):
@@ -231,13 +231,13 @@ class Sect:
         """
         attrs, sects = [], []
         for key, value in self.items():
-            self._debug(4, '__repr__', f'Checking key [{key!r}] {type(value)} {value!r}')
+            self._log(4, '__repr__', f'Checking key [{key!r}] {type(value)} {value!r}')
             if isinstance(value, Sect):
                 sects.append(key)
-                self._debug(4, '__repr__', '└ This key is a Sect')
+                self._log(4, '__repr__', '└ This key is a Sect')
             else:
                 attrs.append(key)
-                self._debug(4, '__repr__', '└ This key is an Attr')
+                self._log(4, '__repr__', '└ This key is an Attr')
 
         # Shorten the length of these strings if there's too many keys
         if len(attrs) > self._repr:
@@ -255,12 +255,15 @@ class Sect:
         """
         return '  ' * (len(self._name.split('.')) - 1)
 
-    def _debug(self, level, func, msg):
+    def _log(self, level, func, msg):
         """
         Formats debug messages
         """
-        if level in self._dbug or func in self._dbug:
-            Logger.debug(f'{self._offset}<{type(self).__name__}>({self._name}).{func}() {msg}')
+        message = f'{self._offset}<{type(self).__name__}>({self._name}).{func}() {msg}'
+        if level == 'e':
+            Logger.error(message)
+        elif level in self._dbug or func in self._dbug:
+            Logger.debug(message)
 
     def _patch(self, other, inplace=True):
         """
@@ -268,7 +271,7 @@ class Sect:
         """
         if not inplace:
             self = self.deepCopy()
-            self._debug(1, '_patch', 'Patching on deep copy')
+            self._log(1, '_patch', 'Patching on deep copy')
 
         # Auto cast to Sect so merges are easier
         for key, item in Sect(other).items(var=True):
@@ -278,21 +281,21 @@ class Sect:
             if isinstance(item, Sect):
                 # Patch two Sects together
                 if isinstance(data, Sect):
-                    self._debug(1, '_patch', f'Patching sub Sect [{key!r}] = {data} | {item}')
+                    self._log(1, '_patch', f'Patching sub Sect [{key!r}] = {data} | {item}')
                     self[key] = data | item
                 # Replace with the other Sect
                 else:
-                    self._debug(1, '_patch', f'Adding sub Sect [{key!r}] = {item}')
+                    self._log(1, '_patch', f'Adding sub Sect [{key!r}] = {item}')
                     self[key] = item
             else:
                 # Log whether this is replacing or adding a Var, or if something borked
                 if isinstance(item, Var):
                     if isinstance(data, Var):
-                        self._debug(1, '_patch', f'Replacing Var [{key!r}] = {item!r}')
+                        self._log(1, '_patch', f'Replacing Var [{key!r}] = {item!r}')
                     else:
-                        self._debug(1, '_patch', f'Adding Var [{key!r}] = {item!r}')
+                        self._log(1, '_patch', f'Adding Var [{key!r}] = {item!r}')
                 else:
-                    Logger.error(f'A value other than a Sect or Var was found and should not have been: {type(item)} = {item!r}')
+                    self._log('e', '_patch', f'A value other than a Sect or Var was found and should not have been: {type(item)} = {item!r}')
 
                 self[key] = item
 
@@ -317,24 +320,24 @@ class Sect:
         name = self._subkey(key)
 
         # Retrieve this key from self if it exists
-        self._debug(2, '_setdata', f'Retrieving if this key [{key!r}] already exists')
+        self._log(2, '_setdata', f'Retrieving if this key [{key!r}] already exists')
         data = self.get(key, var=True)
 
         # Already a Var object, typically from unpickling
         if isinstance(value, Var):
-            self._debug(2, '_setdata', f'Input was a Var, setting self[{key!r}] = {value}')
+            self._log(2, '_setdata', f'Input was a Var, setting self[{key!r}] = {value}')
             self._sect[key] = value
             value._update(key, self)
 
         # Already a Sect, typically from patching
         elif isinstance(value, (type(self), Sect)):
-            self._debug(2, '_setdata', f'Input was a Sect, setting self[{key!r}] = {value}')
+            self._log(2, '_setdata', f'Input was a Sect, setting self[{key!r}] = {value}')
             self._sect[key] = value
             value._update(key, self)
 
         # These types are Sects, everything else will be Vars
         elif isinstance(value, (dict, list, tuple)):
-            self._debug(2, '_setdata', f'Setting new Sect [{key!r}] = Sect({value}, defs={defs})')
+            self._log(2, '_setdata', f'Setting new Sect [{key!r}] = Sect({value}, defs={defs})')
             self._sect[key] = Sect(
                 name   = name,
                 data   = value,
@@ -347,12 +350,12 @@ class Sect:
         # Key already exists, Var object instantiated
         elif isinstance(data, Var):
             # The Var obj will report any issues with setting the value (eg. failed checks)
-            self._debug(2, '_setdata', f'Updating existing Var [{key!r}]: {data}.value = {value}')
+            self._log(2, '_setdata', f'Updating existing Var [{key!r}]: {data}.value = {value}')
             data.value = value
 
         # Create as a Var object
         else:
-            self._debug(2, '_setdata', f'Setting new Var [{key!r}] = Var({value}, kwargs={kwargs}))')
+            self._log(2, '_setdata', f'Setting new Var [{key!r}] = Var({value}, kwargs={kwargs}))')
             self._sect[key] = Var(
                 name   = name,
                 key    = key,
@@ -363,7 +366,7 @@ class Sect:
             )
 
         # Always apply at the end if there's new defs, no harm if not
-        self._debug(2, '_setdata', f'[{key!r}] Applying defs: {defs}')
+        self._log(2, '_setdata', f'[{key!r}] Applying defs: {defs}')
         self.get(key, var=True).applyDefinition(defs)
 
     def _setdefs(self, key, defs):
@@ -400,7 +403,7 @@ class Sect:
         old = internal['_name']
         new = parent._subkey(key)
         if new is not Null and new != old:
-            self._debug(1, '_update', f'Updating name from {old!r} to {new}')
+            self._log(1, '_update', f'Updating name from {old!r} to {new}')
             internal['_name'] = new
 
         # Update children
@@ -417,10 +420,10 @@ class Sect:
             if key.startswith('.'):
                 key = key[1:]
                 if key not in self:
-                    self._debug(0, 'applyDefinition', f'Adding missing key {key!r}')
+                    self._log(0, 'applyDefinition', f'Adding missing key {key!r}')
                     self._setdefs(key, val)
                 else:
-                    self._debug(0, 'applyDefinition', f'Applying defs to key {key!r}')
+                    self._log(0, 'applyDefinition', f'Applying defs to key {key!r}')
                     self.get(key, var=True).applyDefinition(val)
 
     def deepUpdate(self):
@@ -430,7 +433,7 @@ class Sect:
         """
         for key, item in self.items(var=True):
             if not isinstance(item, (type(self), Sect, Var)):
-                Logger.error(f'Should never encounter any type other Sect or Var, got: {type(item)} = {item}')
+                self._log('e', 'deepUpdate', f'Should never encounter any type other Sect or Var, got: {type(item)} = {item}')
             item._update(key, self)
 
     def deepCopy(self, memo=None):
@@ -477,37 +480,42 @@ class Sect:
         This memo now acts a snapshot of the current state of the object. If you
         want to recreate this snapshot, call `sect.deepCopy(memo)` again.
         """
-        self._debug(0, 'deepCopy', f'Creating deep copy using memo: {memo}')
+        self._log(0, 'deepCopy', f'Creating deep copy using memo: {memo}')
         return copy.deepcopy(self, memo)
 
-    def get(self, key, other=None, var=False):
+    def get(self, key, other=None, var=False, default=True):
         """
+        Parameters
+        ----------
+        key: str
+            Item name to look up
+        other: any, defaults=None
+            If
+        var: bool, defaults=False
+            Return the item as a Var
+        default: bool, defaults=True
+            If a default value is available, return that instead of `other`
         """
-        val = self._sect.get(key, other=Null, var=True)
-        if val is not Null:
-            if isinstance(val, Var):
-                if var:
-                    self._debug(3, 'get', f'[{key!r}] requested var, returning as: {val!r}')
-                    return val
-                self._debug(3, 'get', f'[{key!r}] returning value of var: {val!r}')
-                return val.value
-            self._debug(3, 'get', f'[{key!r}] is not a Var or Null, returning value: {val!r}')
-            return val
+        val = self.__getattr__(key, var=var, default=default)
 
-        self._debug(3, 'get', f'[{key!r}] is Null, returning other: {other!r}')
-        return other
+        if val is Null:
+            self._log(3, 'get', f'[{key!r}] Val is Null, returning other: {other!r}')
+            return other
+
+        self._log(3, 'get', f'[{key!r}] Returning value: {val!r}')
+        return val
 
     def keys(self):
         return self._sect.keys()
 
     def values(self, var=False):
-        self._debug(3, 'values', f'Returning values with var={var}')
+        self._log(3, 'values', f'Returning values with var={var}')
         return [self.get(key, var=var) for key in self]
 
     def items(self, var=False):
         """
         """
-        self._debug(3, 'items', f'Returning items with var={var}')
+        self._log(3, 'items', f'Returning items with var={var}')
         return [(key, self.get(key, var=var)) for key in self]
 
     def hasAttrs(self):
@@ -528,7 +536,7 @@ class Sect:
                 return True
         return False
 
-    def toDict(self, deep=True):
+    def toDict(self, deep=True, var=False):
         """
         Converts the Sect to a dict object
 
@@ -536,17 +544,23 @@ class Sect:
         ----------
         deep: bool, defaults=True
             Will convert child Sects to primitive types as well
+        var: bool, defaults=False
+            Returns the Var object instead of its value
         """
         data = {}
         for key, item in self._sect.items():
             value = self[key]
-            data[key] = value
-            if deep and isinstance(item, Sect):
-                self._debug(0, 'toDict', f'Converting child Sect [{key!r}].toPrimitive()')
-                data[key] = value.toPrimitive()
+            if var:
+                data[key] = item
+            elif deep and isinstance(item, Sect):
+                self._log(0, 'toDict', f'Converting child Sect [{key!r}].toPrimitive()')
+                data[key] = value.toPrimitive(var=var)
+            else:
+                data[key] = value
+
         return data
 
-    def toList(self, deep=True):
+    def toList(self, deep=True, var=False):
         """
         Converts the sect to a list object
 
@@ -554,17 +568,23 @@ class Sect:
         ----------
         deep: bool, defaults=True
             Will convert child Sects to primitive types as well
+        var: bool, defaults=False
+            Returns the Var object instead of its value
         """
         data = []
         for key, item in self._sect.items():
             value = self[key]
-            data.append(value)
-            if deep and isinstance(item, Sect):
-                self._debug(0, 'toList', f'Converting child Sect [{key!r}].toPrimitive()')
-                data[-1] = value.toPrimitive()
+            if var:
+                data.append(item)
+            elif deep and isinstance(item, Sect):
+                self._log(0, 'toList', f'Converting child Sect [{key!r}].toPrimitive()')
+                data.append(value.toPrimitive(var=var))
+            else:
+                data.append(value)
+
         return data
 
-    def toPrimitive(self):
+    def toPrimitive(self, *args, **kwargs):
         """
         Determines what type of primitive type to convert this Sect to
 
@@ -572,7 +592,7 @@ class Sect:
             dict
             list
         """
-        return getattr(self, f'to{self._type}')()
+        return getattr(self, f'to{self._type}')(*args, **kwargs)
 
     def resetVars(self):
         """
@@ -584,7 +604,7 @@ class Sect:
             elif isinstance(item, Var):
                 item.reset()
             else:
-                Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
+                self._log('e', 'resetVars', f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
 
     def dumpYaml(self, string=True):
         """
@@ -704,7 +724,7 @@ class Sect:
             elif isinstance(item, Var):
                 dump += rowFromVar(item)
             else:
-                Logger.error(f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
+                self._log('e', 'dumpYaml', f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
 
         if string:
             return '\n'.join(

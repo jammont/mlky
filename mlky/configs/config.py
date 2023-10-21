@@ -11,7 +11,10 @@ import logging
 
 import yaml
 
-from . import Sect
+from . import (
+    NullDict,
+    Sect
+)
 
 
 Logger = logging.getLogger(__file__)
@@ -55,23 +58,23 @@ class Config(Sect):
         # Backwards compatible config = Config()
         if data is None:
             if local is True:
-                self._debug(1, '__call__', 'No data, local True, creating deep copy of global instance')
+                self._log(1, '__call__', 'No data, local True, creating deep copy of global instance')
                 self = self.deepCopy()
-                self._debug(1, '__call__', 'Returning deep copy')
+                self._log(1, '__call__', 'Returning deep copy')
             else:
-                self._debug(1, '__call__', 'No data, local False, returning global instance')
+                self._log(1, '__call__', 'No data, local False, returning global instance')
             return self
 
         # Local creates a new instance
         if local:
-            self._debug(1, '__call__', 'Creating new local instance of Config using different data')
+            self._log(1, '__call__', 'Creating new local instance of Config using different data')
             self = type(self)(data, patch, defs, **kwargs)
-            self._debug(1, '__call__', 'Returning new, different local instance')
+            self._log(1, '__call__', 'Returning new, different local instance')
         else:
             # Otherwise update the global instance
-            self._debug(1, '__call__', 'Reinitializing the global instance using new data')
+            self._log(1, '__call__', 'Reinitializing the global instance using new data')
             self.__init__(data, patch, defs, **kwargs)
-            self._debug(1, '__call__', 'The global instance has been reinitialized')
+            self._log(1, '__call__', 'The global instance has been reinitialized')
         return self
 
     def patchSects(self, keys, inplace=False):
@@ -91,11 +94,11 @@ class Config(Sect):
             If inplace, returns self with newly set _sect. Otherwise return the
             newly patched Sect
         """
-        self._debug(0, 'patchSects', f'Patching using: {keys}')
+        self._log(0, 'patchSects', f'Patching using: {keys}')
 
         new = Sect(debug=self._dbug)
         for key in keys:
-            self._debug(0, 'patchSects', f'Patching with [{key!r}]')
+            self._log(0, 'patchSects', f'Patching with [{key!r}]')
             if key in self:
                 data = self.get(key, var=True)
                 if isinstance(data, Sect):
@@ -106,8 +109,8 @@ class Config(Sect):
                 Logger.error(f'Key [{key!r}] is not in this Config')
 
         if inplace:
-            self._debug(0, 'patchSects', f'Setting new patched Sect inplace')
-            self.__dict__['_sect'] = new
+            self._log(0, 'patchSects', f'Setting new patched Sect inplace')
+            self.__dict__['_sect'] = NullDict(new.toPrimitive(deep=False, var=True))
             new = self
 
         # Reset all Vars to refresh any magic changes that need to happen
@@ -134,7 +137,7 @@ class Config(Sect):
         Config: mlky.Config
             Reset Config instance, either global or local
         """
-        self._debug(0, 'resetSects', 'This is a hard reset, be careful')
+        self._log(0, 'resetSects', 'This is a hard reset, be careful')
         parms = dict(
             data  = self._data,
             patch = self._patch if keys is None else keys,

@@ -3,7 +3,7 @@ Utilities for the `definitions` files
 """
 import click
 
-from .sect   import nict
+from . import NullDict
 from ..utils import (
     printTable,
     load_string
@@ -30,7 +30,7 @@ Comments = {
 }
 
 # Stores the keys of a definitions file to allow easy changes
-DK = nict({
+DK = NullDict({
     'ldesc'   : '.desc'    , # Long description
     'sdesc'   : '.short'   , # Short description
     'type'    : '.type'    ,
