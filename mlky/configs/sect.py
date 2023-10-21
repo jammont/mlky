@@ -87,8 +87,9 @@ class Sect:
         if isinstance(data, dict):
             # if the input data is a dict, combine with kwargs to allow mix inputs eg. Sect({'a': 1}, b=2)
             for key, value in (kwargs | data).items():
-                defs = defs.get(f'.{key}', {})
-                self._setdata(key, value, defs=defs)
+                self._setdata(key, value,
+                    defs = defs.get(f'.{key}', {})
+                )
 
         elif isinstance(data, (list, tuple)):
             # Flag that this is a list-type Sect to change some downstream behaviours
@@ -509,14 +510,14 @@ class Sect:
         return self._sect.keys()
 
     def values(self, var=False):
-        self._log(3, 'values', f'Returning values with var={var}')
-        return [self.get(key, var=var) for key in self]
+        self._log(3, 'values', f'args={args}, kwargs={kwargs}')
+        return [self.__getattr__(key, *args, **kwargs) for key in self]
 
-    def items(self, var=False):
+    def items(self, *args, **kwargs):
         """
         """
-        self._log(3, 'items', f'Returning items with var={var}')
-        return [(key, self.get(key, var=var)) for key in self]
+        self._log(3, 'items', f'args={args}, kwargs={kwargs}')
+        return [(key, self.__getattr__(key, *args, **kwargs)) for key in self]
 
     def hasAttrs(self):
         """
@@ -645,7 +646,7 @@ class Sect:
             defs = sect._defs
 
             sdesc = defs.get('sdesc', '')
-            dtype = defs.get('dtype', 'dict')
+            dtype = defs.get('dtype', self._type.lower())
 
             # ! = required, ? = optional under a required sect, ' ' = optional
             flag = ' '
@@ -698,7 +699,10 @@ class Sect:
                     parent = parent._prnt
 
             # Use yaml to dump this correctly
-            strings = yaml.dump({key: value}).split('\n')[:-1]
+            if self._type == 'List':
+                strings = ['- ' + yaml.dump(value)[:-5]]
+            else:
+                strings = yaml.dump({key: value}).split('\n')[:-1]
 
             # If this is a list value, there will be multiple lines
             others = []
@@ -716,7 +720,7 @@ class Sect:
 
 
         dump = [('generated:', 'K', 'dtype', 'Short description')]
-        for key, item in self.items(var=True):
+        for key, item in self._sect.items():
             if isinstance(item, Sect):
                 # `key` is not in the item, create the "key: value" string for the row tuple
                 dump.append(rowFromSect(f'{item._offset}{key}:', item))
