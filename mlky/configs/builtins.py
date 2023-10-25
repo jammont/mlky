@@ -69,14 +69,14 @@ def cpu_count(*args):
 
 
 @register()
-def oneof(value, *options, regex=False):
+def oneof(var, *options, regex=False):
     """
     Checks if a given value is one of a list of options
 
     Parameters
     ----------
-    value: any
-        Some value to check if it is one of the `options` provided
+    var: mlky.Var
+        Checks the var.value against `options`
     options: list
         List of objects to check if `value` is in
     regex: bool, defaults=False
@@ -89,6 +89,7 @@ def oneof(value, *options, regex=False):
         Returns True if `value` is oneof `options`, otherwise return an error
         message as a string
     """
+    value = var.value
     if regex:
         for opt in options:
             if re.search(opt.replace('//', '/'), value):
@@ -124,45 +125,52 @@ def gen_hash(size=6, reset=False):
 
 
 @register()
-def isdir(path):
+def isdir(var):
     """
     Simply performs os.path.isdir()
 
     Parameters
     ----------
-    path: str
-        Directory path to check existence
+    var: mlky.Var
+        The Var object to check os.path.isdir(var.value) on
 
     Returns
     -------
     bool or str
         Returns True if the path exists, otherwise returns an error string
     """
+    path = var.value
     return os.path.isdir(path) or f'Directory Not Found: {path}'
 
 
 @register()
-def isfile(path):
+def isfile(var):
     """
     Simply performs os.path.isfile()
 
     Parameters
     ----------
-    path: str
-        File path to check existence
+    var: mlky.Var
+        The Var object to check os.path.isfile(var.value) on
 
     Returns
     -------
     bool or str
         Returns True if the path exists, otherwise returns an error string
     """
+    path = var.value
     return os.path.isfile(path) or f'File Not Found: {path}'
 
 
 @register()
-def compare(value, lt=None, lte=None, gt=None, gte=None):
+def compare(var, lt=None, lte=None, gt=None, gte=None):
     """
+    Parameters
+    ----------
+    var: mlky.Var
+        The Var object to compare with
     """
+    value  = var.value
     errors = []
     if lt is not None:
         if not value < lt:
@@ -181,7 +189,7 @@ def compare(value, lt=None, lte=None, gt=None, gte=None):
 
 
 @register()
-def between(value, a, b, inclusive=False):
+def between(var, a, b, inclusive=False):
     """
     Intuitive syntax for `compare` function
 
@@ -208,28 +216,28 @@ def between(value, a, b, inclusive=False):
         within specified bounds, return True, else return a list of strings
         which are the error message(s).
     """
-    args = {}
+    kwargs = {}
     if inclusive in ['lower', 'both', True]:
-        args['gte'] = a
+        kwargs['gte'] = a
     else:
-        args['gt'] = a
+        kwargs['gt'] = a
 
     if inclusive in ['upper', 'both', True]:
-        args['lte'] = b
+        kwargs['lte'] = b
     else:
-        args['lt'] = b
+        kwargs['lt'] = b
 
-    return compare(value, **args)
+    return compare(var, **kwargs)
 
 
 @register()
-def one_valid(vars):
+def one_valid(items):
     """
     Checks that one of the keys passes .validate()
     """
     ov = False # One Valid
-    for var in vars:
-        err = var.validate().reduce()
+    for item in items:
+        err = item.validate().reduce()
         ov |= not err
     return ov or f'At least one key must be valid and none are: {keys}'
 
@@ -240,22 +248,12 @@ def mutually_exclusive(items):
     Checks that only one key is defined
     """
     defined = []
-    for var in vars:
-        if var.value is not Null:
-            ...
+    for item in items:
+        if item._f.value is not Null:
+            defined.append(item._f.name)
 
-    keys  = list(k) + keys
-    isset = [] # Keys that have a set value
-    valid = False # One of these keys passed .validate()
-
-    for key in keys:
-        var = sect.get(key, var=True)
-
-        if var.value is not Null:
-            isset.append(key)
-
-    if len(isset) > 1:
-        return f'The following keys are mutually exclusive, please only set one: {isset}'
+    if len(defined) > 1:
+        return f'The following keys are mutually exclusive, please only set one: {defined}'
     return True
 
 
