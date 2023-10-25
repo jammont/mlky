@@ -4,7 +4,7 @@ The Null class of mlky.
 import logging
 
 
-Logger = logging.getLogger('__file__')
+Logger = logging.getLogger(__file__)
 
 
 class NullType(type):

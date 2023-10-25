@@ -12,6 +12,7 @@ import logging
 import yaml
 
 from . import (
+    funcs,
     NullDict,
     Sect
 )
@@ -43,6 +44,9 @@ class Config(Sect):
                 debug = debug,
                 **kwargs
             )
+
+        # Always called after initialization in case registered checks need to be re-added
+        funcs.getRegister('config.addChecks')()
 
     def __call__(self, data=None, patch=[], defs={}, *, local=False, **kwargs):
         """
@@ -155,6 +159,13 @@ class Config(Sect):
         if isinstance(patch, str):
             return patch.split('<-')
         return patch
+
+    @staticmethod
+    def addChecks():
+        """
+        Simply calls funcs.getRegister('config.addChecks')()
+        """
+        funcs.getRegister('config.addChecks')()
 
 
 # Transforms the module into a Singleton-like instance

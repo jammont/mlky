@@ -5,17 +5,13 @@ import copy
 import logging
 
 from . import (
-    Functions,
+    ErrorsDict,
+    funcs,
     Null
 )
 
 
 Logger = logging.getLogger(__file__)
-
-
-class Errors(dict):
-    def reduce(self):
-        return {k: v for k, v in self.items() if isinstance(v, (str, list))}
 
 
 class Var:
@@ -106,6 +102,33 @@ class Var:
         return f'<Var({self.key}={self.value!r})>'
 
     @property
+    def _f(self):
+        """
+        A 'flags' function to standardize internal attribute lookups between
+        Sect and Var objects.
+
+        While Vars just use plain words for attributes such as `Var.checks`,
+        Sects use an underscore followed by a standard 4 letters like
+        `Sect._chks`. This property on both classes will access the same desired
+        attribute:
+            Var.checks == Var._f.checks <=> Sect._f.checks == Sect._chks
+
+        Which is useful when iterating over a list that may contain both Var
+        and Sect objects:
+        ```
+        >>> Config({'a': 1, 'b': {}})
+        >>> for key, item in Config.items(var=True):
+        ...     print(key, type(item), item._f.name)
+        a <class 'mlky.configs.var.Var'> .a
+        b <class 'mlky.configs.sect.Sect'> .b
+        ```
+        One caveat: on Var objects this works fine, but on Sect objects this
+        is read-only due to creating a view of internal attributes rather than
+        be the attribute variables themselves
+        """
+        return self
+
+    @property
     def _offset(self):
         """
         Offset in spaces to denote hierarchical level
@@ -161,7 +184,7 @@ class Var:
         if not self.required and value is Null:
             return True
 
-        return Functions.check('type', value, self.dtype)
+        return funcs.getRegister('check_dtype')(value, self.dtype)
 
     def validate(self, value=Null):
         """
@@ -188,7 +211,7 @@ class Var:
             value = self.value
 
         # Custom dict, can use e.reduce() to remove e[check]=True
-        errors = Errors()
+        errors = ErrorsDict()
 
         # Don't run any checks if the key was missing
         if self.missing:
@@ -209,7 +232,7 @@ class Var:
                     kwargs = args
                     args = []
 
-            errors[check] = Functions.check(check, value, *args, **kwargs)
+            errors[check] = funcs.getRegister(check)(self, *args, **kwargs)
 
         # self._debug(0, 'validate', f'Errors reduced: {errors.reduce()}') # Very spammy, unsure about usefulness
         return errors
@@ -245,4 +268,4 @@ class Var:
         # TODO: This is broken, just default to the global instance until further research
         parent = None
 
-        return Functions.check('config.replace', value, parent)
+        return funcs.getRegister('config.replace')(value, parent)

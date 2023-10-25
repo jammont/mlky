@@ -6,8 +6,8 @@ import re
 
 from . import (
     Config,
+    funcs,
     Null,
-    Functions,
     register
 )
 
@@ -15,7 +15,7 @@ from . import (
 Logger = logging.getLogger(__file__)
 
 
-@register('config.replace')
+@register(name='config.replace')
 def replace(value, instance=None):
     """
     Replaces format signals in strings with values from the config relative to
@@ -97,15 +97,15 @@ def replace(value, instance=None):
 
             # Environment variable lookup case
             elif match.startswith('$'):
-                data = Functions.check('get_env', match[1:])
+                data = funcs.getRegister('get_env')(match[1:])
 
             # Lookup custom function case
             elif match.startswith('?'):
-                data = Functions.check(match[1:])
+                data = funcs.getRegister(match[1:])
 
             # Data lookup case
             elif match.startswith('!'):
-                return Functions.check(match[1:])
+                return funcs.getRegister(match[1:])
 
             else:
                 Logger.warning(f'Replacement matched to string but no valid starter token provided: {match!r}')
@@ -113,3 +113,23 @@ def replace(value, instance=None):
             value = value.replace('${'+ match +'}', str(data))
 
     return value
+
+
+@register(name='config.addChecks')
+def addChecks():
+    """
+    Adds checks that were assigned by a registered function to the Config
+    """
+    Logger.debug('Adding checks to Config')
+    for key, checks in funcs.Checks.items():
+        lvls = key.split('.')[1:]
+
+        # Find the key of interest
+        this = Config
+        for lvl in lvls:
+            this = this.get(lvl, Null, var=True)
+
+        # Assign the check if the key exists
+        if this:
+            this._f.checks += checks
+            Logger.debug(f'└ {this}._f.checks += {checks}')

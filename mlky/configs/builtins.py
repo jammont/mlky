@@ -7,6 +7,7 @@ import re
 import uuid
 
 from . import (
+    funcs,
     Null,
     register
 )
@@ -54,7 +55,7 @@ def null(*args, **kwargs):
     return Null()
 
 
-@register('os.cpu_count')
+@register(name='os.cpu_count')
 def cpu_count(*args):
     """
     Wrapper to access the os.cpu_count() function
@@ -219,3 +220,101 @@ def between(value, a, b, inclusive=False):
         args['lt'] = b
 
     return compare(value, **args)
+
+
+@register()
+def one_valid(vars):
+    """
+    Checks that one of the keys passes .validate()
+    """
+    ov = False # One Valid
+    for var in vars:
+        err = var.validate().reduce()
+        ov |= not err
+    return ov or f'At least one key must be valid and none are: {keys}'
+
+
+@register()
+def mutually_exclusive(items):
+    """
+    Checks that only one key is defined
+    """
+    defined = []
+    for var in vars:
+        if var.value is not Null:
+            ...
+
+    keys  = list(k) + keys
+    isset = [] # Keys that have a set value
+    valid = False # One of these keys passed .validate()
+
+    for key in keys:
+        var = sect.get(key, var=True)
+
+        if var.value is not Null:
+            isset.append(key)
+
+    if len(isset) > 1:
+        return f'The following keys are mutually exclusive, please only set one: {isset}'
+    return True
+
+
+## Builtin provided type functions
+# More types can be added by importing this dict and appending to it
+# Or by registering a function with the same name as the type
+Types = {
+    Null     : lambda value: True,
+    'Null'   : lambda value: True,
+    None     : lambda value: True,
+    'None'   : lambda value: True,
+    'any'    : lambda value: True,
+    'bool'   : lambda value: isinstance(value, bool   ),
+    'bytes'  : lambda value: isinstance(value, bytes  ),
+    'complex': lambda value: isinstance(value, complex),
+    'dict'   : lambda value: isinstance(value, dict   ),
+    'float'  : lambda value: isinstance(value, float  ),
+    'int'    : lambda value: isinstance(value, int    ),
+    'list'   : lambda value: isinstance(value, list   ),
+    'set'    : lambda value: isinstance(value, set    ),
+    'str'    : lambda value: isinstance(value, str    ),
+    'tuple'  : lambda value: isinstance(value, tuple  )
+}
+
+@register()
+def check_dtype(value, dtype):
+    """
+    Checks the type of a given value.
+
+    Parameters
+    ----------
+    value: any
+        The value in question
+    dtype: any
+        The type this value is supposed to be. If type in [Null, 'Null', None,
+        'None', 'any'] then the check is disabled and will return True.
+        Otherwise, uses the Types dictionary to lookup the function to validate
+        with.
+
+    Returns
+    -------
+    True or str or list of str
+        Returns True if this value is the expected type. If it is not, returns
+        either a string or list of strings describing the error.
+    """
+    if isinstance(dtype, list):
+        if True not in [check_type(value, t) for t in dtype]:
+            return f'Value type <{dtype!r}> is not one of {dtype}'
+        return True
+
+    # Try a builtin then fallback to custom registered
+    func = Types.get(dtype, funcs.Funcs.get(dtype))
+    if func is None:
+        return f'Unknown type: {dtype!r}'
+
+    ret = func(value)
+    if ret is True:
+        return True
+    if isinstance(ret, (str, list)):
+        return ret
+    else:
+        return f'Wrong type: Expected <{dtype!r}> Got {type(value)}'

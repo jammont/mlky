@@ -13,7 +13,8 @@ from pathlib import Path
 import yaml
 
 from . import (
-    Functions,
+    ErrorsDict,
+    funcs,
     Null,
     NullDict,
     NullType,
@@ -33,6 +34,7 @@ class Sect:
     _dbug = -1
     _prnt = Null
     _type = 'Dict'
+    _chks = []
 
     # Class defaults, change these manually via Sect.__dict__[key] = ...
     _repr = 10 # __repr__ limiter to prevent prints being obnoxious
@@ -82,6 +84,7 @@ class Sect:
         self.__dict__['_miss'] = missing
         self.__dict__['_dbug'] = set(debug)
         self.__dict__['_prnt'] = parent
+        self.__dict__['_chks'] = []
         self.__dict__['_sect'] = NullDict()
 
         if isinstance(data, dict):
@@ -250,6 +253,43 @@ class Sect:
         return f"<{type(self).__name__} {self._name or '.'} (Attrs={attrs}, Sects={sects})>"
 
     @property
+    def _f(self):
+        """
+        A 'flags' function to standardize internal attribute lookups between
+        Sect and Var objects.
+
+        While Vars just use plain words for attributes such as `Var.checks`,
+        Sects use an underscore followed by a standard 4 letters like
+        `Sect._chks`. This property on both classes will access the same desired
+        attribute:
+            Var.checks == Var._f.checks <=> Sect._f.checks == Sect._chks
+
+        Which is useful when iterating over a list that may contain both Var
+        and Sect objects:
+        ```
+        >>> Config({'a': 1, 'b': {}})
+        >>> for key, item in Config.items(var=True):
+        ...     print(key, type(item), item._f.name)
+        a <class 'mlky.configs.var.Var'> .a
+        b <class 'mlky.configs.sect.Sect'> .b
+        ```
+        One caveat: on Var objects this works fine, but on Sect objects this
+        is read-only due to creating a view of internal attributes rather than
+        be the attribute variables themselves
+        """
+        return NullDict(
+            name    = self._name,
+            value   = self._sect,
+            dtype   = self._type,
+            defs    = self._defs,
+            checks  = self._chks,
+            debug   = self._debug,
+            parent  = self._prnt,
+            update  = self._update,
+            missing = self._miss,
+        )
+
+    @property
     def _offset(self):
         """
         Offset in spaces to denote hierarchical level
@@ -322,7 +362,7 @@ class Sect:
 
         # Retrieve this key from self if it exists
         self._log(2, '_setdata', f'Retrieving if this key [{key!r}] already exists')
-        data = self.get(key, var=True)
+        data = self._sect[key]
 
         # Already a Var object, typically from unpickling
         if isinstance(value, Var):
@@ -368,20 +408,22 @@ class Sect:
 
         # Always apply at the end if there's new defs, no harm if not
         self._log(2, '_setdata', f'[{key!r}] Applying defs: {defs}')
-        self.get(key, var=True).applyDefinition(defs)
+        self._sect[key].applyDefinition(defs)
 
     def _setdefs(self, key, defs):
         """
         Sets keys from a definitions dictionary
         """
         value = Null
+        dtype = defs.get('dtype', 'dict')
 
         # Children start with '.'
         if any(key.startswith('.') for key in defs):
             value = {}
-            if defs.get('dtype') == 'list':
+            if dtype == 'list':
                 value = [{} for _ in range(defs.get('repeat', 1))]
 
+        self._log(1, '_setdefs', f'[{key!r}] = {value!r}, defs={defs}')
         self._setdata(key, value, defs=defs, missing=True)
 
     def _update(self, key, parent=Null):
@@ -414,7 +456,8 @@ class Sect:
         """
         Applies a definitions object against this Sect
         """
-        self.__dict__['_defs'] = defs = self.loadDict(defs)
+        defs = self.loadDict(defs)
+        self.__dict__['_defs'] = defs
 
         # Apply definitions to child keys, or create the key if missing
         for key, val in defs.items():
@@ -509,7 +552,7 @@ class Sect:
     def keys(self):
         return self._sect.keys()
 
-    def values(self, var=False):
+    def values(self, *args, **kwargs):
         self._log(3, 'values', f'args={args}, kwargs={kwargs}')
         return [self.__getattr__(key, *args, **kwargs) for key in self]
 
