@@ -5,7 +5,7 @@ import logging
 from . import Null
 
 
-Logger = logging.getLogger('mlky/functions')
+Logger = logging.getLogger(__file__)
 
 # {key: func}, all registered functions of mlky
 Funcs = {}

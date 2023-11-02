@@ -120,7 +120,7 @@ def addChecks():
     """
     Adds checks that were assigned by a registered function to the Config
     """
-    Logger.debug('Adding checks to Config')
+    Config._log(0, 'addChecks', 'Adding checks to Config')
     for key, checks in funcs.Checks.items():
         lvls = key.split('.')[1:]
 

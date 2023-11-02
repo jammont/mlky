@@ -38,8 +38,6 @@ def test_init():
     assert cfg3 == data, 'Reinitialized config did not match new input'
     assert cfg4 == data, 'Reinitialized config did not match new input'
 
-    # return True
-
 
 @pytest.mark.parametrize('data,keys', [
     ({'a': {'f': {'m': {'r': {'s': 7}}}, 'y': 2}, 'b': {'x': -1}, 'c': {'z': 3}}, ['a', 'b', 'c'])
@@ -82,4 +80,15 @@ def test_yamlDifferences(data, keys):
     assert load != copy, '`load` should not match `copy` anymore'
     assert load == conf, '`load` should now match `conf` after deleting the conflicting key'
 
-    # return True
+
+def test_replace():
+    """
+    Tests the replacement logic of Vars through the Config
+    """
+    C = Config({'a': 1, 'b': '${.a}'})
+    assert C.a == 1
+    assert C.b == '1'
+
+    C = Config({'a': '${.b}', 'b': 2})
+    assert C.a == '2'
+    assert C.b == 2

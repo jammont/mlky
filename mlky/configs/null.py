@@ -95,3 +95,6 @@ class NullDict(dict):
 
     def __getitem__(self, key):
         return self.__getattr__(key)
+
+    def __setattr__(self, key, value):
+        self[key] = value

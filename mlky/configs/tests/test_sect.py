@@ -27,8 +27,6 @@ def test_isinstance():
     assert isinstance(sect.a, Sect), 'Instance is not isinstance of Sect'
     assert isinstance(sect.c, Sect), 'Instance is not isinstance of Sect'
 
-    # return True
-
 
 @pytest.mark.parametrize('data', Cases)
 def test_recursive(data):
@@ -37,8 +35,6 @@ def test_recursive(data):
     """
     sect = Sect(data)
     assert sect == Sect(sect), 'sect != Sect(sect)'
-
-    # return True
 
 
 @pytest.mark.parametrize('data', Cases)
@@ -53,8 +49,6 @@ def test_pickle(data):
 
     assert sect == load, 'Loaded pickle data does not match original'
 
-    # return True
-
 
 @pytest.mark.parametrize('data', Cases)
 def test_deepcopy(data):
@@ -64,8 +58,6 @@ def test_deepcopy(data):
     sect = Sect(data)
     copy = sect.deepCopy()
     assert copy == sect, 'The copy did not match the original'
-
-    # return True
 
 
 @pytest.mark.parametrize('data,solution', [
@@ -80,8 +72,6 @@ def test_patching(data, solution, debug=False):
 
     assert base == solution, f'Patching failed to match solution, expected {solution}, got {base.toDict()}'
 
-    # return True
-
 
 def test_operators():
     """
@@ -91,8 +81,6 @@ def test_operators():
     assert base < {'a': 1} == {'a': 1}
     assert base | {'a': 1} == {'a': 1}
     assert base | {'a': 1} | {'b': 2} == {'a': 1, 'b': 2}
-
-    # return True
 
 
 def test_get():
@@ -118,4 +106,32 @@ def test_get():
     assert var.value is Null, 'defs key .value should be Null'
     assert var.default == 7, 'defs key .default was wrong'
 
-    # return True
+
+def test_opts():
+    """
+    Test combinations of Sect._opts
+    """
+    Sect._opts.convertListTypes = False
+    Sect._opts.convertItems     = True
+
+    S = Sect({'a': 1, 'b': {'c': 2}, 'd': [3, {'f': {'g': 4, 'h': [5, 'i']}}]})
+
+    assert S.a == 1
+    assert S.b == {'c': 2}
+
+    assert isinstance(S.d, list)
+    assert S.d[0] == 3
+
+    assert isinstance(S.d[1], Sect)
+    assert isinstance(S.d[1].f, Sect)
+    assert S.d[1].f.g == 4
+
+    assert isinstance(S.d[1].f.h, list)
+    assert S.d[1].f.h[0] == 5
+    assert S.d[1].f.h[1] == 'i'
+
+    Sect._opts.convertListTypes = False
+    Sect._opts.convertItems     = False
+
+    S = Sect({'a': [[0, 1], [2, 3]]})
+    assert S.a == [[0, 1], [2, 3]]

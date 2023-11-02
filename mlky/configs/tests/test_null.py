@@ -17,8 +17,6 @@ def test_comparisons():
     assert Null() == Null(), 'Null() != Null()'
     assert bool(Null) == False, 'bool(Null) != False'
 
-    # return True
-
 
 def test_attrs():
     """
@@ -31,8 +29,6 @@ def test_attrs():
     Null.test.recursive = 1
     assert Null.test is Null, 'Null setattr fails'
     assert Null.test.recursive is Null, 'Null setattr fails recursively'
-
-    # return True
 
 
 def test_warnings(caplog):
@@ -52,8 +48,6 @@ def test_warnings(caplog):
     Null._warn = False
     Null.test  = 1
     assert caplog.records == [], 'Warnings failed to be disabled'
-
-    # return True
 
 
 def test_NullDict():
@@ -75,5 +69,3 @@ def test_NullDict():
     assert n.b    == 2
     assert n['b'] == 2
     assert n.a    == Null
-
-    # return True

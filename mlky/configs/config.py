@@ -48,6 +48,9 @@ class Config(Sect):
         # Always called after initialization in case registered checks need to be re-added
         funcs.getRegister('config.addChecks')()
 
+        # Reset all Vars to refresh any magic changes that need to happen
+        self.resetVars()
+
     def __call__(self, data=None, patch=[], defs={}, *, local=False, **kwargs):
         """
         Enables resetting the global instance Config or create local copies
@@ -116,9 +119,6 @@ class Config(Sect):
             self._log(0, 'patchSects', f'Setting new patched Sect inplace')
             self.__dict__['_sect'] = NullDict(new.toPrimitive(deep=False, var=True))
             new = self
-
-        # Reset all Vars to refresh any magic changes that need to happen
-        new.resetVars()
 
         return new
 

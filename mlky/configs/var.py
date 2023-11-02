@@ -30,10 +30,17 @@ class Var:
         debug    = -1,
         sdesc    = '',
         ldesc    = '',
-        parent   = Null
+        parent   = Null,
+        replace  = True
     ):
         """
         Variable container object
+
+        Parameters
+        ----------
+        replace: bool, defaults=True
+            Use the default Var.__setattr__ which will call replace() on `value`
+            If `False`, circumvents Var.__setattr__ by using super().__setattr__
         """
         if isinstance(debug, int):
             debug = range(0, debug+1)
@@ -49,10 +56,14 @@ class Var:
         self.sdesc    = sdesc
         self.ldesc    = ldesc
         self.parent   = parent
-
-        # Set last as replace() and validate() will be called
-        self.value    = value
         self.original = value
+
+        if replace:
+            # This will call replace() then validate()
+            self.value = value
+        else:
+            # No replace(), takes as-is
+            super().__setattr__('value', value)
 
     def __eq__(self, other):
         data = self.toDict()
@@ -78,16 +89,39 @@ class Var:
             self.missing, self.checks
         ))
 
+    def deepReplace(self, value):
+        """
+        Calls reset on the children of this Var's value if it is a list type
+        """
+        for i, item in enumerate(value):
+            if 'Sect' in str(type(item)):
+                self._debug(2, 'deepReplace', f'Resetting {item}')
+                item.resetVars()
+
+            elif isinstance(item, str):
+                new = self.replace(item)
+                if new is not None:
+                    self._debug(2, 'deepReplace', f'Replacing index [{i}] {item!r} with {new!r}')
+                    value[i] = new
+
+            elif isinstance(item, (list, tuple)):
+                self._debug(2, 'deepReplace', f'Calling deepReplace on child list {item}')
+                self.deepReplace(item)
+
     def __setattr__(self, key, value):
         """
         """
         if key == 'value':
-            # Always call to see if this value should be replaced
-            new = self.replace(value)
-            if new is not value:
-                self.original = value
-                self._debug(2, '__setattr__', f'Replacing {value!r} with {new!r}')
-                value = new
+            # Lists to Sects disabled, perform a deep replacement
+            if isinstance(value, (list, tuple)):
+                self.original = copy.deepcopy(value)
+                self.deepReplace(value)
+            else:
+                # Always call to see if this value should be replaced
+                new = self.replace(value)
+                if new is not None:
+                    self.original = value
+                    value = new
 
             # No longer missing if it's set
             self.missing = False
@@ -243,8 +277,9 @@ class Var:
         reset all Vars to trigger replacements after a Config finishes
         initialization
         """
-        self._debug(0, 'reset', f'Resetting from {self.value} to {self.original}')
-        self.value = self.original
+        if self.value is not self.original:
+            self._debug(0, 'reset', f'Resetting from {self.value} to {self.original}')
+            self.value = self.original
 
     def applyDefinition(self, defs):
         """
@@ -268,4 +303,7 @@ class Var:
         # TODO: This is broken, just default to the global instance until further research
         parent = None
 
-        return funcs.getRegister('config.replace')(value, parent)
+        replacement = funcs.getRegister('config.replace')(value, parent)
+        if replacement is not value:
+            self._debug(0, 'replace', f'Replacing {value!r} with {replacement!r}')
+            return replacement

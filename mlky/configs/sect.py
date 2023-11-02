@@ -36,6 +36,14 @@ class Sect:
     _type = 'Dict'
     _chks = []
 
+    # Options to control the behaviour of the Sect object for all Sect objects
+    _opts = NullDict(
+        # TODO: (Doc this better) Not converting list types will prevent the ability to patch them, values for these keys will simply be replaced on patch
+        convertListTypes = True,
+        convertItems     = True,
+        VarsReplaceInit  = True
+    )
+
     # Class defaults, change these manually via Sect.__dict__[key] = ...
     _repr = 10 # __repr__ limiter to prevent prints being obnoxious
 
@@ -46,6 +54,7 @@ class Sect:
         missing = False,
         debug   = -1,
         parent  = Null,
+        _opts   = {},
         **kwargs
     ):
         """
@@ -63,6 +72,9 @@ class Sect:
             If passed as a list of ints, will only enable those levels.
             If the list is comprised of strings, any function names in this list
             will be enabled
+        _opts: dict, defaults={}
+            Override options for this Sect and its children only. This will also detach
+            this Sect from the global options, so those changes will not propogate
 
         Notes
         -----
@@ -75,6 +87,10 @@ class Sect:
         """
         if isinstance(debug, int):
             debug = range(0, debug+1)
+
+        # Override the options for this Sect if given
+        if _opts:
+            self.__dict__['_opts'] = NullDict(self._opts | _opts)
 
         # Parse the input data from a supported type
         data = self.loadDict(data)
@@ -356,6 +372,16 @@ class Sect:
     def _setdata(self, key, value, defs={}, **kwargs):
         """
         Sets an item/attribute into the Sect
+
+        Notes
+        -----
+        * Not converting ListTypes (list, tuple) to Sect limits a few capabilities:
+            - These types become Vars, so patching doesn't work. Patching two Sects
+            together will write one Var list over the other
+            - In order for resetVars to work, _opts.VarsReplaceInit will be set to
+            `False` for all child Sects of this list, if _opts.convertItems is `True`
+            This will result in any new Vars created on these Sects will not auto call
+            replace.
         """
         # Generate the proper name for this key
         name = self._subkey(key)
@@ -363,6 +389,18 @@ class Sect:
         # Retrieve this key from self if it exists
         self._log(2, '_setdata', f'Retrieving if this key [{key!r}] already exists')
         data = self._sect[key]
+
+        # Var is the last resort type
+        setVar = False
+
+        # Reduce duplicate code as this is repeated a few times
+        args = dict(
+            name   = name,
+            data   = value,
+            defs   = defs,
+            debug  = self._dbug,
+            parent = self
+        )
 
         # Already a Var object, typically from unpickling
         if isinstance(value, Var):
@@ -377,16 +415,26 @@ class Sect:
             value._update(key, self)
 
         # These types are Sects, everything else will be Vars
-        elif isinstance(value, (dict, list, tuple)):
+        elif isinstance(value, dict):
             self._log(2, '_setdata', f'Setting new Sect [{key!r}] = Sect({value}, defs={defs})')
-            self._sect[key] = Sect(
-                name   = name,
-                data   = value,
-                defs   = defs,
-                debug  = self._dbug,
-                parent = self,
-                **kwargs
-            )
+            self._sect[key] = Sect(**args, **kwargs)
+
+        # List types may be Sects, depends on options set
+        elif isinstance(value, (list, tuple)):
+            # if convertListTypes then we set a Sect, all other option combinations create a Var
+            setVar = True
+
+            # Default behaviour, cast to a Sect
+            if self._opts.convertListTypes:
+                self._log(2, '_setdata', f'Setting new Sect [{key!r}] = Sect({value}, defs={defs})')
+                self._sect[key] = Sect(**args, **kwargs)
+                setVar = False
+
+            # If not, should the items of the list be converted?
+            elif self._opts.convertItems:
+                self._log(2, '_setdata', f'Setting new List [{key!r}] as Var')
+                opts  = dict(convertListTypes=True, VarsReplaceInit=False)
+                value = Sect(_opts=opts, **args, **kwargs).toPrimitive(deep=False)
 
         # Key already exists, Var object instantiated
         elif isinstance(data, Var):
@@ -394,15 +442,20 @@ class Sect:
             self._log(2, '_setdata', f'Updating existing Var [{key!r}]: {data}.value = {value}')
             data.value = value
 
-        # Create as a Var object
         else:
+            # All other cases will create a new Var
+            setVar = True
+
+        # Create as a Var object
+        if setVar:
             self._log(2, '_setdata', f'Setting new Var [{key!r}] = Var({value}, kwargs={kwargs}))')
             self._sect[key] = Var(
-                name   = name,
-                key    = key,
-                value  = value,
-                debug  = self._dbug,
-                parent = self,
+                name    = name,
+                key     = key,
+                value   = value,
+                debug   = self._dbug,
+                parent  = self,
+                replace = self._opts.VarsReplaceInit,
                 **kwargs
             )
 
