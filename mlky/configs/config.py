@@ -35,8 +35,9 @@ class Config(Sect):
             super().__init__(data=data, debug=debug, **kwargs)
             self.patchSects(patch, inplace=True)
 
-            # Apply defs post patching
-            self.applyDefinition(defs)
+            if defs:
+                # Apply defs post patching
+                self.applyDefinition(defs)
         else:
             super().__init__(
                 data  = data,
@@ -145,7 +146,7 @@ class Config(Sect):
         parms = dict(
             data  = self._data,
             patch = self._patch if keys is None else keys,
-            defs  = self._defs
+            defs  = self._defs or {}
         )
         return self(**(parms | kwargs))
 

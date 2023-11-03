@@ -31,6 +31,7 @@ class Sect:
     # Default values for when a subclass isn't fully initialized
     _name = ""
     _sect = NullDict()
+    _defs = {}
     _dbug = -1
     _prnt = Null
     _type = 'Dict'
