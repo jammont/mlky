@@ -459,9 +459,10 @@ class Sect:
                 **kwargs
             )
 
-        # Always apply at the end if there's new defs, no harm if not
-        self._log(2, '_setdata', f'[{key!r}] Applying defs: {defs}')
-        self._sect[key].applyDefinition(defs)
+        # Update definitions at the end regardless of input type
+        if defs:
+            self._log(2, '_setdata', f'[{key!r}] Applying defs: {defs}')
+            self._sect[key].applyDefinition(defs)
 
     def _setdefs(self, key, defs):
         """
