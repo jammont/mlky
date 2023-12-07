@@ -16,6 +16,13 @@ mlky is a versatile Python configuration software package designed by data scien
 
 - **TRL Scalability**: mlky is designed to assist projects scaling the Technology Readiness Levels ([TRL](https://www.nasa.gov/directorates/heo/scan/engineering/technology/technology_readiness_level)). At low-TRLs, mlky offers its maximum flexibility by providing minimal setup, simple syntax, and forgiving fault tolerance. Once time for a project to mature, mlky assists achieving higher TRLs by providing the framework to set rigid configuration requirements, template generation, and custom error checking.
 
+## Table of Contents
+
+Please see the following pages for more information:
+
+1. [Getting Started](usage.md)
+2. [API](api.md)
+
 ## Contributing
 
 We welcome contributions from the community. If you'd like to contribute to mlky, please follow these steps:
