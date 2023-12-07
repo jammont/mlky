@@ -103,6 +103,7 @@ class Sect:
         self.__dict__['_prnt'] = parent
         self.__dict__['_chks'] = []
         self.__dict__['_sect'] = NullDict()
+        self.__dict__['_defs'] = {}
 
         if isinstance(data, dict):
             # if the input data is a dict, combine with kwargs to allow mix inputs eg. Sect({'a': 1}, b=2)
