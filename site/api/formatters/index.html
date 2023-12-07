@@ -1,0 +1,986 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../magics/">
+      
+      
+        <link rel="next" href="../io/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.0">
+    
+    
+      
+        <title>api/utils/formatters - mlky</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.45e1311d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mlky.utils.formatters" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="mlky" class="md-header__button md-logo" aria-label="mlky" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            mlky
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              api/utils/formatters
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="mlky" class="md-nav__button md-logo" aria-label="mlky" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    mlky
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    api/configs/Config
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sect/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    api/configs/Sect
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../var/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    api/configs/Var
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../funcs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    api/configs/funcs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../magics/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    api/configs/magics
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    api/utils/formatters
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    api/utils/formatters
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#mlky.utils.formatters" class="md-nav__link">
+    <span class="md-ellipsis">
+      formatters
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.printTable" class="md-nav__link">
+    <span class="md-ellipsis">
+      printTable()
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="printTable()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.printTable--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.printTable--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.simpleTable" class="md-nav__link">
+    <span class="md-ellipsis">
+      simpleTable()
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="simpleTable()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.simpleTable--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../io/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    api/utils/io
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../prettyslice/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    api/utils/prettyslice
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../templates/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    api/utils/templates
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#mlky.utils.formatters" class="md-nav__link">
+    <span class="md-ellipsis">
+      formatters
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.printTable" class="md-nav__link">
+    <span class="md-ellipsis">
+      printTable()
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="printTable()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.printTable--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.printTable--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Returns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.simpleTable" class="md-nav__link">
+    <span class="md-ellipsis">
+      simpleTable()
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="simpleTable()">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mlky.utils.formatters.simpleTable--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  <h1>api/utils/formatters</h1>
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="mlky.utils.formatters"></a>
+  <div class="doc doc-contents first">
+  
+      <p>Pretty printers</p>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h2 id="mlky.utils.formatters.printTable" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">printTable</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">enum</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">prepend</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">print</span><span class="o">=</span><span class="nb">print</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">{},</span> <span class="n">_i</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Parameters can be set on a per column basis using the columns parameter. This is a
+dictionary of column indices as keys and the parameters for that column as the
+value.</p>
+<h4 id="mlky.utils.formatters.printTable--parameters">Parameters</h4>
+<p>filename : str
+copy : bool
+dtype : data-type
+iterable : iterable object
+shape : int or tuple of int
+files : list of str</p>
+<h4 id="mlky.utils.formatters.printTable--returns">Returns</h4>
+<p>formatted: list</p>
+
+          <details class="quote">
+            <summary>Source code in <code>mlky/utils/formatters.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">printTable</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">enum</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">prepend</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">print</span><span class="o">=</span><span class="nb">print</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">{},</span> <span class="n">_i</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parameters can be set on a per column basis using the columns parameter. This is a</span>
+<span class="sd">    dictionary of column indices as keys and the parameters for that column as the</span>
+<span class="sd">    value.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : str</span>
+<span class="sd">    copy : bool</span>
+<span class="sd">    dtype : data-type</span>
+<span class="sd">    iterable : iterable object</span>
+<span class="sd">    shape : int or tuple of int</span>
+<span class="sd">    files : list of str</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    formatted: list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Retrieve the parameters for this column</span>
+    <span class="n">args</span>      <span class="o">=</span> <span class="n">columns</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">_i</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">delimiter</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;delimiter&#39;</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">)</span>
+    <span class="n">offset</span>    <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;offset&#39;</span>   <span class="p">,</span> <span class="n">offset</span>   <span class="p">)</span>
+
+    <span class="c1"># Left and right side of the delimiter for this column</span>
+    <span class="n">left</span>  <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">right</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">left</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">right</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">left</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="n">padding</span>   <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">len</span><span class="p">,</span> <span class="n">left</span><span class="p">))])</span> <span class="o">+</span> <span class="n">offset</span>
+    <span class="n">formatter</span> <span class="o">=</span> <span class="n">prepend</span>
+    <span class="k">if</span> <span class="n">enum</span><span class="p">:</span>
+        <span class="n">formatter</span> <span class="o">+=</span> <span class="s1">&#39;{i:&#39;</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">iterable</span><span class="p">)))</span><span class="si">}</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="s1">&#39;}: &#39;</span>
+    <span class="n">formatter</span> <span class="o">+=</span> <span class="s1">&#39;{left:&#39;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">padding</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;}&#39;</span> <span class="o">+</span> <span class="n">delimiter</span> <span class="o">+</span> <span class="s1">&#39; </span><span class="si">{right}</span><span class="s1">&#39;</span>
+
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">formatted</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">string</span> <span class="o">=</span> <span class="n">formatter</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">left</span><span class="o">=</span><span class="n">left</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">right</span><span class="o">=</span><span class="n">right</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">formatted</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">string</span><span class="p">,</span> <span class="o">*</span><span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">:]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">formatted</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">string</span><span class="p">,</span> <span class="p">))</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">formatted</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+    <span class="c1"># Check if there are any more columns to format</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">formatted</span><span class="p">]):</span>
+        <span class="c1"># Only delimiter and offset are carried forward, other parameters disabled</span>
+        <span class="n">formatted</span> <span class="o">=</span> <span class="n">printTable</span><span class="p">(</span><span class="n">formatted</span><span class="p">,</span>
+            <span class="n">delimiter</span> <span class="o">=</span> <span class="n">delimiter</span><span class="p">,</span>
+            <span class="n">offset</span>    <span class="o">=</span> <span class="n">offset</span><span class="p">,</span>
+            <span class="n">enum</span>      <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">prepend</span>   <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+            <span class="nb">print</span>     <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">columns</span>   <span class="o">=</span> <span class="n">columns</span><span class="p">,</span>
+            <span class="n">_i</span>        <span class="o">=</span> <span class="n">_i</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Reduce from [(str,), (str,), ...] to [str, str, ...]</span>
+    <span class="k">if</span> <span class="n">_i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">formatted</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="p">[</span><span class="n">item</span><span class="p">]</span> <span class="ow">in</span> <span class="n">formatted</span><span class="p">]</span>
+
+    <span class="c1"># Print is only set on the first call</span>
+    <span class="k">if</span> <span class="nb">print</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">formatted</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">formatted</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h2 id="mlky.utils.formatters.simpleTable" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">simpleTable</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">enum</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">prepend</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">print</span><span class="o">=</span><span class="nb">print</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Pretty prints an iterable in the form {key} = {value} such that the delimiter (=)
+aligns on each line</p>
+<h4 id="mlky.utils.formatters.simpleTable--parameters">Parameters</h4>
+<p>iterable: iterable
+    Any iterable with a .items() function
+enum: bool, default = False
+    Whether to include enumeration of the items
+delimiter, default = '='
+    The symbol to use between the key and the value
+offset: int, default = 1
+    Space between the key and the delimiter: {key}{offset}{delimiter}
+    Defaults to 1, eg: "key ="
+prepend: str, default = ''
+    Any string to prepend to each line
+print: func, default = print
+    The print function to use. Allows using custom function instead of Python's normal print</p>
+
+          <details class="quote">
+            <summary>Source code in <code>mlky/utils/formatters.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">simpleTable</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">enum</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">prepend</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">print</span><span class="o">=</span><span class="nb">print</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Pretty prints an iterable in the form {key} = {value} such that the delimiter (=)</span>
+<span class="sd">    aligns on each line</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    iterable: iterable</span>
+<span class="sd">        Any iterable with a .items() function</span>
+<span class="sd">    enum: bool, default = False</span>
+<span class="sd">        Whether to include enumeration of the items</span>
+<span class="sd">    delimiter, default = &#39;=&#39;</span>
+<span class="sd">        The symbol to use between the key and the value</span>
+<span class="sd">    offset: int, default = 1</span>
+<span class="sd">        Space between the key and the delimiter: {key}{offset}{delimiter}</span>
+<span class="sd">        Defaults to 1, eg: &quot;key =&quot;</span>
+<span class="sd">    prepend: str, default = &#39;&#39;</span>
+<span class="sd">        Any string to prepend to each line</span>
+<span class="sd">    print: func, default = print</span>
+<span class="sd">        The print function to use. Allows using custom function instead of Python&#39;s normal print</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="s1">&#39;items&#39;</span><span class="p">):</span>
+        <span class="n">pad</span>   <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">iterable</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">))</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="n">iterable</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;Iterable must not be empty&#39;</span>
+        <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">]),</span> <span class="s1">&#39;Iterable must contain iterables of length 2&#39;</span>
+        <span class="n">pad</span>   <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">iterable</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="n">iterable</span>
+
+    <span class="c1"># Determine how much padding between the key and delimiter</span>
+    <span class="n">pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="n">pad</span><span class="p">])</span> <span class="o">+</span> <span class="n">offset</span>
+
+    <span class="c1"># Build the formatted string</span>
+    <span class="n">fmt</span> <span class="o">=</span> <span class="n">prepend</span>
+    <span class="k">if</span> <span class="n">enum</span><span class="p">:</span>
+        <span class="n">fmt</span> <span class="o">+=</span> <span class="s1">&#39;- {i:&#39;</span> <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">iterable</span><span class="p">)))</span><span class="si">}</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="s1">&#39;}: &#39;</span>
+    <span class="n">fmt</span> <span class="o">+=</span> <span class="s1">&#39;{key:&#39;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">pad</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;}&#39;</span> <span class="o">+</span> <span class="n">delimiter</span> <span class="o">+</span> <span class="s1">&#39; </span><span class="si">{value}</span><span class="s1">&#39;</span>
+
+    <span class="c1"># Create the formatted list</span>
+    <span class="n">fmt_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="n">fmt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">fmt_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">string</span> <span class="ow">in</span> <span class="n">fmt_list</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">fmt_list</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7c377c4.min.js"></script>
+      
+    
+  </body>
+</html>
