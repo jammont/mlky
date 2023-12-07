@@ -1,86 +1,94 @@
 """
+Tests the mlky Config class
 """
-import yaml
+import pytest
 
-from milkylib.configs.v3 import (
-    Config,
-    Section,
-    Null
-)
+from mlky import Config
 
-def test_local(input={'a': 1, 'b': 2}):
+
+def test_init():
     """
-    Tests:
-    - A local instance's data should not be the class instance's data
-    - Multiple instances of the class should share the same data
+    Tests various use cases of initializing Config instances
     """
-    config = Config(input)
-    local  = Config(local=True)
+    data = {'a': 1, 'b': 2}
+    cfg1 = Config(data)
+    assert cfg1 == data, 'Config did not match input data'
 
-    assert local._sect is not config._sect, 'A local instance shares the same _sect object with the class instance'
+    cfg2 = Config()
+    assert cfg2 == data, 'Config() did not match previously initialized Config'
 
-    new = Config()
+    data = {'x': 1, 'y': 2}
+    cfg3 = Config(data)
+    assert cfg1 == data, 'Reinitialized config did not match new input'
+    assert cfg2 == data, 'Reinitialized config did not match new input'
+    assert cfg3 == data, 'Reinitialized config did not match new input'
 
-    assert new._sect is config._sect, 'A new class instance does not share the same _sect object with another class instance'
+    altL = {'l': 1}
+    cfgL = Config(altL, local=True)
+    assert cfgL == altL, 'Local initialization does not match input'
+    assert cfg1 == data, 'Local initialization broke the global instance'
+    assert cfg2 == data, 'Local initialization broke the global instance'
+    assert cfg3 == data, 'Local initialization broke the global instance'
 
-    return True
+    data = ['j', 'k', 'l']
+    cfg4 = Config(data)
+    assert cfgL == altL, 'Local initialization did not persist global instance reinitialization'
+    assert cfg1 == data, 'Reinitialized config did not match new input'
+    assert cfg2 == data, 'Reinitialized config did not match new input'
+    assert cfg3 == data, 'Reinitialized config did not match new input'
+    assert cfg4 == data, 'Reinitialized config did not match new input'
 
-def test_inheritance(input=None):
+
+@pytest.mark.parametrize('data,keys', [
+    ({'a': {'f': {'m': {'r': {'s': 7}}}, 'y': 2}, 'b': {'x': -1}, 'c': {'z': 3}}, ['a', 'b', 'c'])
+])
+def test_yamlDifferences(data, keys):
     """
+    Tests changes in a config and copies, and dumping and loading yamls
     """
-    input = {
-        'a': {
-            'z': 0
-        },
-        'b': {
-            'z': 1,
-            'y': 1
-        },
-        'c': {
-            'z': 2,
-            'x': 2
-        }
-    }
+    return # TODO: Temporarily disabled while dumpYaml is under construction
 
-    a = Config(input, local=True, inherit=['a', 'b']     )
-    b = Config(input, local=True, inherit=['a', 'b', 'c'])
+    # First initialization
+    conf = Config(data, keys)
 
-    assert a.z == 1, 'Inheritance failed to apply a<-b'
-    assert a.y == 1, 'Inheritance failed to apply a<-b'
+    # Create a copy
+    copy = conf.deepCopy()
+    assert copy == conf, 'Copy did not match conf'
 
-    assert b.z == 2, 'Inheritance failed to apply a<-b<-c'
-    assert b.y == 1, 'Inheritance failed to apply a<-b<-c'
-    assert b.x == 2, 'Inheritance failed to apply a<-b<-c'
+    # Tweak it to ensure they differ
+    copy.diff = 1
+    assert copy != conf, 'Copy should not match conf after changing'
 
-    return True
+    # Make sure the dumps differ too
+    dump = copy.dumpYaml()
+    assert dump != conf.dumpYaml(), 'YAML dumps should not match'
 
-def test_validate(dir='/Users/jamesmo/projects/milkylib/milkylib/configs/tests/yamls/'):
-    rules = yaml.load(open(f'{dir}/rules.yml', 'r'), Loader=yaml.FullLoader)
+    # Change the copy further to compare with loading
+    copy.load = False
 
-    good = yaml.load(open(f'{dir}/good.yml', 'r'), Loader=yaml.FullLoader)
+    # Recreate from dump as a local instance
+    load = Config(dump, ['generated'], local=True)
+    assert load != copy, '`load` should not match the `copy` as it was changed after dumping'
+    assert load != conf, '`load` should not match the `conf`'
 
-    assert Config.validate(rules=rules, data=good, _raise=False) == {1: [], 2: [], 3: []}, 'The good case failed with errors'
+    # Delete the differences and ensure equality
+    del copy.load
+    assert load == copy, '`load` should now match `copy` after deleting the conflicting key'
+    assert load != conf, '`load` should not match `conf` yet'
 
-    bad = yaml.load(open(f'{dir}/bad.yml', 'r'), Loader=yaml.FullLoader)
+    del load.diff
+    assert load != copy, '`load` should not match `copy` anymore'
+    assert load == conf, '`load` should now match `conf` after deleting the conflicting key'
 
-    assert Config.validate(rules=rules, data=bad, _raise=False) == {
-        1: [
-            '.sect1.attr1',
-            '.sect3'
-        ],
-        2: [],
-        3: [
-            ('.sect1.attr2', 'int', 'str', 'abc'),
-            ('.sect1.sub1.attr3', 'bool', 'float', 1.0),
-            ('.sect1.sub1.attr4', 'list', 'str', '(a, b)'),
-            ('.sect2.attr5', 'float', 'bool', True),
-            ('.sect2.attr6', 'str', 'list', ['a', 'b', 'c']),
-            ('.sect4[0].attr8', 'str', 'int', 0),
-            ('.sect4[1].attr8', 'str', 'int', 1),
-            ('.sect4[0].attr9', 'int', 'str', 'jkl'),
-            ('.sect4[1].attr9', 'int', 'str', 'mno'),
-            ('.sect4[1].attr10', 'bool', 'int', -1)
-        ]
-    }, 'The bad case did not return the expected errors'
 
-    return True
+def test_replace():
+    """
+    Tests the replacement logic of Vars through the Config
+    """
+    C = Config({'a': 1, 'b': '${.a}'})
+    assert C.a == 1
+    assert C.b == '1'
+
+    C = Config({'a': '${.b}', 'b': 2})
+    assert C.a == '2'
+    assert C.b == 2

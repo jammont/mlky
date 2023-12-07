@@ -1,4 +1,4 @@
-full:
+v1:
   isofit_root: /Users/jamesmo/projects/isofit
   working_dir: ${.isofit_root}/examples/profiling_cube/${$CHUNK}_chunk
   forward_model:
@@ -80,4 +80,6 @@ full:
   output:
     estimated_reflectance_file: ${.working_dir}/output/ang20170323t202244_rfl
     estimated_state_file: ${.working_dir}/output/ang20170323t202244_state
-    posterior_uncertainty_file: ${.working_dir}/output/ang20170323t202244_uncert
+
+v2:
+  isofit_root: /something/else

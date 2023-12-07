@@ -79,21 +79,33 @@ Null
 Null
 ```
 
-Ideally you would want to initialize the `Config` object at the beginning and have each function request its own copy:
+Because it is a singleton, you can also use `Config` directly instead of a variable as well as use the class across the Python instance:
+
+```python
+# Script 1
+from mlky import Config
+
+Config(a=1, b=2) # initialize somewhere
+```
+```python
+# Script 2
+from mlky import Config
+
+Config.a == 1
+Config.b == 2
+```
+
+Ideally you would want to initialize the `Config` object at the beginning and then leverage the global instance:
 
 ```python
 from mlky import Config
 
 def process(item):
-  config = Config()
-
-  if config.param:
+  if Config.param:
     ...
 
 def main():
-  config = Config()
-
-  for item in config.process:
+  for item in Config.process:
     process(item)
 
 if __name__ == '__main__':

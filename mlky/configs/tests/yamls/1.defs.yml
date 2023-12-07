@@ -1,0 +1,38 @@
+.target:
+    dtype: str
+    sdesc: Target feature
+    required: True
+.train:
+    dtype: list
+    sdesc: Years to train with
+    default: [2020, 2021]
+.test:
+    dtype: list
+    sdesc: Years to test with
+    default: [2022]
+.stack:
+    dtype: bool
+    sdesc: Auto stack the input data to flaten from 3d to 2d
+    default: True
+.model:
+    dtype: dict
+    sdesc: Controls what kind of model is used
+    .name:
+        dtype: str
+        sdesc: "Name of model to select, currently support: RandomForestRegressor, RandomForestClassifier"
+        default: RandomForestRegressor
+        checks:
+          - oneof:
+            - RandomForestRegressor
+            - RandomForestClassifier
+    .params:
+        dtype: dict
+        sdesc: Parameters to pass directly to the model via model(**params)
+        .random_state:
+            dtype: int
+            sdesc: Model seed
+            default: 0
+        .n_jobs:
+            dtype: int
+            sdesc: Multiprocessing CPUs to use, -1 = all
+            default: -1

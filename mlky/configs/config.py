@@ -1,419 +1,173 @@
 """
-Date: October, 2022
+The main configuration class of mlky
+
+The primary features of this class are:
+    1. Manage the patching of top-level sections
+    2. Act as a Singleton-like instance
+
+Beyond that, Config is simply a Sect object
 """
-import argparse
-import copy
 import logging
-import os
-import re
+
 import yaml
 
 from . import (
-    Functions,
-    generate,
-    Section,
-    Null,
-    register
-)
-from ..utils import (
-    column_fmt,
-    load_string
+    funcs,
+    NullDict,
+    Sect
 )
 
 
-Logger = logging.getLogger('mlky/config')
+Logger = logging.getLogger(__file__)
 
 
-class Config:
-    """
-    Config class
-
-    Notes
-    -----
-    > How does this work? What's the difference between a class and local instance?
-    At run time, Python goes through the scripts and loads all of the code into memory.
-    All variable, function, and object definitions are loaded into memory as their own
-    independent objects/definitions. When a function is called, the instance of that
-    function in memory is called. Same with objects: when a new object is being created,
-    Python returns a copy of the definition object. This class modifies the definition
-    object directly so that every new instantiation of the class copies the newest
-    definition of the object.
-
-    This is defined as the class instance. There is only ever one class definition, and
-    therefore only one class instance to copy. All copies of the class instance reference
-    the same attributes in memory. Thus, changing the values in one class instance will
-    change the values in the other class instances.
-
-    A local instance is the traditional definition of a class instantiation in Python.
-    Normally, a class instance is copied but to a new slot in memory. The local instance's
-    attributes are their own objects in memory, so accessing them will not affect the class
-    instance's attributes.
-
-    Known Issues
-    ------------
-    * Reloading the module inside an active interpreter (command line, Jupyter) will
-    reset the class definition, therefore resetting the class instance. This will cause
-    a maximum recursion error. This can be resolved by simply initializing the Config
-    class instance again.
-    """
-    def __init__(self, input=None, inherit=[], local=False, defs={}, defs_inherit=[], _validate=True, _raise=True):
+class Config(Sect):
+    def __init__(self, data={}, patch=[], defs={}, debug=-1, validate=True, _raise=True, **kwargs):
         """
-        Parameters
-        ----------
-        input: tuple, dict, str, defaults=None
-            Input of a variety of types:
-            - tuple: When reinstantiating from unpickling
-            - dict : Instantiating from an in-memory dictionary
-            - str  : Either a path to a support file type or is yaml parsable
-            - None : Skips instantiation and uses the current class instance
-        inherit: list, str, defaults=[]
-            - list: Order of keys to apply inheritance
-            - str : List of section names split by '<-' in inheritance order
-        local: bool, defaults=False
-            Enables returning as a local instance object rather than the default class instance
-        defs: tuple, dict, str, defaults=None
-            Accepts same types as `input`, this is a dictionary defining the requirements for a valid configuration
-        defs_inherit: list, defaults=[]
-            Order of keys to apply inheritance to definitions dictionary
-        _validate: bool, defaults=True
-            Executes validation after initialization
-        _raise: bool, defaults=True
-            Enables raising an exception when validation fails
         """
-        # Not local and no input, return the singleton
-        if not local and input is None:
-            # if not hasattr(Config, '_data'):
-            #     raise ValueError('mlky.Config must be initialized with a configuration before creating instances')
-            return
+        # Config-specific private variables
+        self.__dict__['_patch'] = patch = self.parsePatch(patch)
+        self.__dict__['_raise'] = _raise
 
-        data = None
-        name = None
+        # If patching, don't apply defs with creation
+        if patch:
+            # Patching the post initialized state is easiest
+            super().__init__(data=data, debug=debug, **kwargs)
+            self.patchSects(patch, inplace=True)
 
-        # Returning from pickle case (__reduce__)
-        if isinstance(input, tuple):
-            data, input, inherit, defs, local = input
-            name = '<-'.join(inherit)
-        elif input is not None:
-            if isinstance(input, dict):
-                data = input
-
-            elif isinstance(input, str):
-                data = load_string(input)
-
-            # Apply config-defined inheritances
-            for key, value in data.items():
-                if isinstance(value, dict) and '^inherit' in value:
-                    _inherit = value['^inherit']
-                    if isinstance(_inherit, str):
-                        _inherit = _inherit.split('<-')
-                    _inherit += [key]
-                    # Create a deep copy of the keys needed
-                    data[key] = self.inherit_(_inherit,
-                        copy.deepcopy({k: v for k, v in data.items() if k in _inherit})
-                    )
-
-            # Apply inheritance if this isn't returning from pickle
-            if inherit:
-                if isinstance(inherit, str):
-                    inherit = inherit.split('<-')
-
-                data = self.inherit_(inherit, data)
-                name = '<-'.join(inherit)
-
-        # Load the requirements if provided
-        if defs:
-            if isinstance(defs, str):
-                defs = load_string(defs)
-
-            if defs_inherit:
-                defs = self.inherit_(defs_inherit, defs)
-
-        # Local instances will copy class._data when not provided new input
-        if data is None:
-            data = self._data
-
-            # Only retrieve _defs when data is None
-            if not defs:
-                defs = self._defs
-
-        sect = Section(name='', data=data, defs=defs)
-        defs = Section(name='', data=defs)
-
-        # Local instance needs to call super() to avoid recursive error due to custom __getattr__
-        if local:
-            super().__setattr__('_local'  , local  )
-            super().__setattr__('_input'  , input  )
-            super().__setattr__('_data'   , data   )
-            super().__setattr__('_defs'   , defs   )
-            super().__setattr__('_sect'   , sect   )
-            super().__setattr__('_inherit', inherit)
-            super().__setattr__('_name'   , name   )
-
-        # Not a local instance, update the class's attributes
+            if defs:
+                # Apply defs post patching
+                self.applyDefinition(defs)
         else:
-            self.__class__._local   = False
-            self.__class__._input   = input
-            self.__class__._data    = data
-            self.__class__._defs    = defs
-            self.__class__._sect    = sect
-            self.__class__._inherit = inherit
-            self.__class__._name    = name
+            super().__init__(
+                data  = data,
+                defs  = defs,
+                debug = debug,
+                **kwargs
+            )
 
-        # Done after object initialization so reference keys are available
-        sect.replace_()
+        # Always called after initialization in case registered checks need to be re-added
+        funcs.getRegister('config.addChecks')()
 
-        # Only validate when a definitions object has been provided
-        if _validate:
-            if self._defs:
-                self.validate_(_raise=_raise)
+        # Reset all Vars to refresh any magic changes that need to happen
+        self.resetVars()
 
-    def __reduce__(self):
-        data = (self._data, self._input, self._inherit, self._defs, self._local)
-        return self.__class__, (data, )
-
-    def __contains__(self, key):
-        return key in self._sect
-
-    def __iter__(self):
-        return iter(self._sect)
-
-    def __len__(self):
-        return len(self._sect)
-
-    def __delattr__(self, key):
-        del self._sect[key]
-
-    def __delitem__(self, key):
-        del self._sect[key]
-
-    def __getattr__(self, key):
-        return self._sect[key]
-
-    def __getitem__(self, key):
-        return self._sect[key]
-
-    def __setattr__(self, key, value):
-        if isinstance(value, Section):
-            value._name = key
-        self._sect[key] = value
-
-    def __setitem__(self, key, value):
-        self.__setattr__(key, value)
-
-    def __repr__(self):
-        return f'<Config (local={self._local}, inherit={self._name}, {self._sect})>'
-
-    def get(self, key, other=None, **kwargs):
-        return self._sect.get(key, other, **kwargs)
-
-    def items(self):
-        return self._sect.items()
-
-    def reset_(self, inherit=None):
+    def __call__(self, data=None, patch=[], defs={}, *, local=False, **kwargs):
         """
-        Resets this instance of the Config.
-        If class instance, resets class instance.
-        If local instance, resets local instance.
-
-        Parameters
-        ----------
-        inherit: list or str, defaults=None
-            Changes behaviour depending on type:
-            - None: Reapplies the current inheritance
-            - list: Applies inheritance in the provided order
-            - str : Reapplies the original inheritance order but changes the last section with this str
+        Enables resetting the global instance Config or create local copies
         """
-        if inherit is None:
-            inherit = self._inherit
-        if isinstance(inherit, str):
-            inherit = [*self._inherit[:-1], inherit]
+        # Changing debug state needs to update before anything else to ensure expected behaviour
+        debug = kwargs.get('debug')
+        if debug is not None:
+            if isinstance(debug, int):
+                debug = range(0, debug+1)
+            self.__dict__['_dbug'] = set(debug)
 
-        # Simply reinitialize
-        self.__init__(
-            input   = self._input,
-            inherit = inherit,
-            local   = self._local
-        )
+        # Backwards compatible config = Config()
+        if data is None:
+            if local is True:
+                self._log(1, '__call__', 'No data, local True, creating deep copy of global instance')
+                self = self.deepCopy()
+                self._log(1, '__call__', 'Returning deep copy')
+            else:
+                self._log(1, '__call__', 'No data, local False, returning global instance')
+            return self
 
-    def validate_(self=None, sect=None, defs=None, _raise=True):
+        # Local creates a new instance
+        if local:
+            self._log(1, '__call__', 'Creating new local instance of Config using different data')
+            self = type(self)(data, patch, defs, **kwargs)
+            self._log(1, '__call__', 'Returning new, different local instance')
+        else:
+            # Otherwise update the global instance
+            self._log(1, '__call__', 'Reinitializing the global instance using new data')
+            self.__init__(data, patch, defs, **kwargs)
+            self._log(1, '__call__', 'The global instance has been reinitialized')
+        return self
+
+    def patchSects(self, keys, inplace=False):
         """
-        Parameters
-        ----------
-        sect: dict
-            The configuration data
-        defs: dict
-            The definitions for the configuration
-        _raise: bool
-            Raises an exception after printing the errors
-
-        Returns
-        -------
-        errors: dict
-            Dictionary of validation results for the given data
-        """
-        if defs is None:
-            defs = self._defs
-
-        if sect is None:
-            sect = self._sect
-
-        Logger.info('Checking configuration for errors')
-        errors = sect.report_()
-        if errors:
-            Logger.error('Failed checks, see above for errors')
-            if _raise:
-                raise Exception('The configuration did not pass validation. See logs for more details.')
-
-        return errors
-
-    def template_(self=None, defs=None, **kwargs):
-        """
-        Convenience method to call mlky.generate_template from the config object
-
-        Parameters
-        ----------
-        self: object, default=None
-            Normally provided by the object instance. Setting to None allows the
-            function to be used as a staticmethod without being such.
-        defs: mlky.Section, default=None
-            The requirements Section object. If not provided, uses self._defs
-
-        Returns
-        -------
-        lines: list
-            List of strings per line for the YAML template
-        """
-        return generate(defs or self._defs, **kwargs)
-
-    @staticmethod
-    def inherit_(keys, data):
-        """
-        Deep updates dictionaries in order of inheritance.
+        Patches child Sects in order given
 
         Parameters
         ----------
         keys: list
-            List of keys in `data` to apply inheritance in order.
-            Example: keys [a, b, c] will apply inheritance a<-b<-c
-        data: dict
-            Configuration data dictionary
+            Patch keys list in order
+        inplace: bool, default=False
+            Auto set the Config `_sect` to the patched Sect
 
         Returns
         -------
-        new: dict
-            A new dictionary with the inheritance order applied
+        self: mlky.Config or new: mlky.Sect
+            If inplace, returns self with newly set _sect. Otherwise return the
+            newly patched Sect
         """
-        def update(a, b):
-            """
-            Recursively updates the dictionary B with the data of dictionary A
-            """
-            for k, v in a.items():
-                if k in b and isinstance(v, dict):
-                    update(v, b[k])
-                else:
-                    b[k] = v
+        self._log(0, 'patchSects', f'Patching using: {keys}')
 
-            return b
-
-        new = {}
+        new = Sect(debug=self._dbug)
         for key in keys:
-            if key not in data:
-                Logger.warning(f'Key {key!r} not in {data.keys()}')
-                continue
+            self._log(0, 'patchSects', f'Patching with [{key!r}]')
+            if key in self:
+                data = self.get(key, var=True)
+                if isinstance(data, Sect):
+                    new |= data
+                else:
+                    Logger.error(f'Key [{key!r}] is not a Sect, it is type {type(data)}')
+            else:
+                Logger.error(f'Key [{key!r}] is not in this Config')
 
-            new = update(data[key], new)
+        if inplace:
+            self._log(0, 'patchSects', f'Setting new patched Sect inplace')
+            self.__dict__['_sect'] = NullDict(new.toPrimitive(deep=False, var=True))
+            new = self
 
         return new
 
+    def resetSects(self, keys=None, **kwargs):
+        """
+        Resets to the last initialized state. This is a hard reset, any changes
+        to the config since last initialization will be lost. This is because
+        this just recreates the Config using the internal `_data` which was the
+        last input to Config. Changes to the Config afterwards is done to the
+        internal `_sect` and won't be reflected in `_data`.
 
-@register('config.replace')
-def replace(value):
-    """
-    Replaces format signals in strings with values from the config relative to
-    its inheritance structure.
+        Parameters
+        ----------
+        keys: list, default=None
+            Patch keys list. `None` defaults to the last used. Empty list `[]`
+            will remove patching altogether
 
-    Parameters
-    ----------
-    value: str
-        Matches roughly to ${config.*} in the string and replaces them with the
-        corrosponding config value. See notes the regex for accuracy.
+        Returns
+        -------
+        Config: mlky.Config
+            Reset Config instance, either global or local
+        """
+        self._log(0, 'resetSects', 'This is a hard reset, be careful')
+        parms = dict(
+            data  = self._data,
+            patch = self._patch if keys is None else keys,
+            defs  = self._defs or {}
+        )
+        return self(**(parms | kwargs))
 
-    Returns
-    -------
-    string: str
-        Same string but with the values replaced.
+    @staticmethod
+    def parsePatch(patch):
+        """
+        Supports different patching syntax styles:
+            str : "key1<-key2<-keyN"
+            list: [key1, key2, keyN]
+        """
+        if isinstance(patch, str):
+            return patch.split('<-')
+        return patch
 
-    Notes
-    -----
-    The regex used for matching is r"\${([\.\$].*?)}". This will match to any
-    string starting with `.` or `$` wrapped by `${}`. Reasons to only match
-    starting with specific keys is to:
-        - `.` - Config value lookup
-        - `$` - Environment variable lookup
+    @staticmethod
+    def addChecks():
+        """
+        Simply calls funcs.getRegister('config.addChecks')()
+        """
+        funcs.getRegister('config.addChecks')()
 
-    Config references must be relative to the inheritance structure. With
-    inheritance, the top level sections do not exist. Without inheritance, they
-    do. Examples:
 
-    >>> # Without inheritance
-    >>> config = Config('''
-    default:
-        path: /abc
-        vars:
-            x: 1
-            y: 2
-    foo:
-        file: ${.default.path}/${.default.vars.x}/${.default.vars.y}
-    ''')
-    >>> replace(config.foo.file)
-    '/abc/1/2'
-
-    >>> # With inheritance
-    >>> config = Config('''
-    default:
-        path: /abc
-        vars:
-            x: 1
-            y: 2
-    foo:
-        file: ${.path}/${.vars.x}/${.vars.y}
-    ''', 'default<-foo')
-    >>> replace(config.file)
-    '/abc/1/2'
-    """
-    matches = re.findall(r"\${([\.\$\!].*?)}", value)
-
-    for match in matches:
-        # Config lookup case
-        if match.startswith('.'):
-            keys = match.split('.')
-
-            if len(keys) < 2:
-                Logger.error(f'Keys path provided is invalid, returning without replacement: {keys!r}')
-                return value
-
-            data = Config()
-            for key in keys[1:]:
-                data = data.__getattr__(key)
-
-            if isinstance(data, Null):
-                Logger.warning(f'Lookup({match}) returned Null. This may not be expected and may cause issues.')
-
-        # Environment variable lookup case
-        elif match.startswith('$'):
-            data = Functions.check('get_env', match[1:])
-
-        # Lookup custom function case
-        elif match.startswith('?'):
-            data = Functions.check(match[1:])
-
-        # Data lookup case
-        elif match.startswith('!'):
-            return Functions.check(match[1:])
-
-        else:
-            Logger.warning(f'Replacement matched to string but no valid starter token provided: {match!r}')
-
-        value = value.replace('${'+ match +'}', str(data))
-
-    return value
+# Transforms the module into a Singleton-like instance
+Config = Config()
