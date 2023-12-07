@@ -21,7 +21,7 @@ from . import (
 Logger = logging.getLogger(__file__)
 
 
-class _Config(Sect):
+class Config(Sect):
     def __init__(self, data={}, patch=[], defs={}, debug=-1, validate=True, _raise=True, **kwargs):
         """
         """
@@ -170,4 +170,4 @@ class _Config(Sect):
 
 
 # Transforms the module into a Singleton-like instance
-Config = _Config()
+GlobalConfig = Config()

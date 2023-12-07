@@ -31,7 +31,7 @@ from .sect import Sect
 from .definitions import generate
 
 # Dependent on Null, NullDict, funcs, register, Var, Sect
-from .config import Config
+from .config import GlobalConfig as Config
 
 # Dependent on Null, funcs, register, Config
 from . import magics

@@ -1,3 +1,3 @@
 
 
-::: mlky.configs.config._Config
+::: mlky.configs.config.Config
