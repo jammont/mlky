@@ -1,3 +1,0 @@
-default:
-  target: abc
-  scale: True
