@@ -1,0 +1,18 @@
+site_name: mlky
+theme:
+  name: material
+plugins:
+  - search
+  - mkdocstrings
+nav:
+  - Home: index.md
+  - "Getting Started": usage.md
+  - "api/configs/Config": api/config.md
+  - "api/configs/Sect": api/sect.md
+  - "api/configs/Var": api/var.md
+  - "api/configs/funcs": api/funcs.md
+  - "api/configs/magics": api/magics.md
+  - "api/utils/formatters": api/formatters.md
+  - "api/utils/io": api/io.md
+  - "api/utils/prettyslice": api/prettyslice.md
+  - "api/utils/templates": api/templates.md

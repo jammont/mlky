@@ -15,7 +15,7 @@ def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', print=
         Any iterable consisting of subscriptable iterables of strings
     enum: bool, default=False
         Whether to include enumeration of the items
-    delimiter, default='='
+    delimiter: str, default='='
         The symbol to use between the key and the value
     offset: int, default=1
         Space between the key and the delimiter: {key}{offset}{delimiter}

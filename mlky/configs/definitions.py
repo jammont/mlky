@@ -1,8 +1,6 @@
 """
 Utilities for the `definitions` files
 """
-import click
-
 from . import NullDict
 from ..utils import (
     printTable,
