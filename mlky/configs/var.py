@@ -3,6 +3,7 @@ Var objects are containers to hold values of a mlky Sect
 """
 import copy
 import logging
+import yaml
 
 from . import (
     ErrorsDict,
@@ -19,6 +20,13 @@ class Var:
     debug    = set()
     missing  = True
     required = False
+    strict   = False
+
+    # Special flag to indicate when to skip checks
+    _skip_checks = False
+
+    # Assists getValue() to retrieve a temporary value without setting it as .value
+    _tmp_value = Null
 
     def __init__(self, name, key,
         value    = Null,
@@ -27,6 +35,7 @@ class Var:
         required = False,
         missing  = False,
         checks   = [],
+        strict   = False,
         debug    = -1,
         sdesc    = '',
         ldesc    = '',
@@ -38,6 +47,8 @@ class Var:
 
         Parameters
         ----------
+        strict: bool, default=False
+            Checks dtype strictly, regardless if required or optional
         replace: bool, defaults=True
             Use the default Var.__setattr__ which will call replace() on `value`
             If `False`, circumvents Var.__setattr__ by using super().__setattr__
@@ -52,13 +63,14 @@ class Var:
         self.required = required
         self.missing  = missing
         self.checks   = checks
+        self.strict   = strict
         self.debug    = set(debug)
         self.sdesc    = sdesc
         self.ldesc    = ldesc
         self.parent   = parent
         self.original = value
 
-        if replace:
+        if replace and not missing:
             # This will call replace() then validate()
             self.value = value
         else:
@@ -112,6 +124,9 @@ class Var:
         """
         """
         if key == 'value':
+            # Reset this if it was set elsewhere when the Var.value is changed
+            self._skip_checks = False
+
             # Lists to Sects disabled, perform a deep replacement
             if isinstance(value, (list, tuple)):
                 self.original = copy.deepcopy(value)
@@ -123,12 +138,16 @@ class Var:
                     self.original = value
                     value = new
 
-            # No longer missing if it's set
-            self.missing = False
+            # Replacement may cause a value to become Null, this is always considered "missing"
+            if value is Null:
+                self.missing = True
+            else:
+                self.missing = False
 
             # Non-empty dict means errors found
-            if self.validate(value).reduce():
-                Logger.error(f'Changing the value of this Var({self.name}) will cause validation to fail. See var.validate() for errors.')
+            errs = self.validate(value).reduce()
+            if errs:
+                Logger.error(f'Changing the value of this Var({self.name}) to will cause validation to fail. See var.validate() for errors')
 
         super().__setattr__(key, value)
 
@@ -210,17 +229,25 @@ class Var:
     def checkType(self, value=Null):
         """
         Checks a given value against the type set for this object.
+
+        Parameters
+        ----------
+        value: any, default=Null
+            Value to test against. If left as default Null, will use the Var.value
         """
         if value is Null:
-            value = self.value
+            value = self.getValue()
 
-        # Not required, already a null value (either set in config explicitly as null or was inherently null)
-        if not self.required and value is Null:
+        if all([
+            not self.strict,        # Strict cases always check dtype
+            not self.required, # Not required to be set
+            value is Null      # Already a null value, possibly inherently null
+        ]):
             return True
 
         return funcs.getRegister('check_dtype')(value, self.dtype)
 
-    def validate(self, value=Null):
+    def validate(self, value=Null, **kwargs):
         """
         Validates a value against this variable's checks
 
@@ -231,7 +258,7 @@ class Var:
 
         Returns
         -------
-        errors: mlky.Errors or True
+        errors: mlky.ErrorsDict or True
             If all checks pass, returns True, otherwise returns an Errors
             object. Essentially the same as a dict. Each key is the check name
             and the value is either True for passing, a string for a single
@@ -242,20 +269,27 @@ class Var:
             functions as well.
         """
         if value is Null:
-            value = self.value
+            value = self.getValue()
+        else:
+            self._tmp_value = value
 
         # Custom dict, can use e.reduce() to remove e[check]=True
         errors = ErrorsDict()
 
+        # Special cases may not want to execute the checks
+        if self._skip_checks:
+            self._debug(0, 'validate', '_skip_checks enabled, returning no errors')
+            return errors
+
         # Don't run any checks if the key was missing
-        if self.missing:
+        if self.missing and not self.strict:
             if self.required:
                 errors['required'] = 'This key is required to be manually set in the config'
-            self._debug(0, 'validate', f'This Var is missing and not required')
+            self._debug(0, 'validate', f'This Var is missing and not strict')
             return errors
 
         # Check the type before anything else
-        errors['type'] = self.checkType()
+        errors['type'] = self.checkType(value)
 
         for check in self.checks:
             args   = []
@@ -266,7 +300,17 @@ class Var:
                     kwargs = args
                     args = []
 
+            self._debug(0, 'validate', f'Running check {check}(args={args}, kwargs={kwargs})')
             errors[check] = funcs.getRegister(check)(self, *args, **kwargs)
+
+        # Validate child objects if this is a list
+        if isinstance(value, list):
+            for item in value:
+                if hasattr(item, 'validate'):
+                    errors[item._f.name] = item.validate()
+
+        # Reset at the end
+        self._tmp_value = Null
 
         # self._debug(0, 'validate', f'Errors reduced: {errors.reduce()}') # Very spammy, unsure about usefulness
         return errors
@@ -277,17 +321,34 @@ class Var:
         reset all Vars to trigger replacements after a Config finishes
         initialization
         """
-        if self.value is not self.original:
-            self._debug(0, 'reset', f'Resetting from {self.value} to {self.original}')
+        value = self.getValue()
+
+        if value is not self.original:
+            self._debug(0, 'reset', f'Resetting from {value} to {self.original}')
             self.value = self.original
+        elif isinstance(value, str) and value.startswith('$'):
+            self._debug(0, 'reset', f'Current value is a magic, resetting to call replacement')
+            self.value = value
 
     def applyDefinition(self, defs):
         """
         Applies values from a definitions object
         """
+        value = self.getValue()
         for key, val in defs.items():
-            self._debug(0, 'applyDefinition', f'{key} = {val!r}')
-            setattr(self, key, val)
+            if key == 'items':
+                for subval in value:
+                    if subval is not Null and hasattr(subval, 'applyDefinition'):
+                        name = subval._f.name
+                        self._debug(0, 'applyDefinition', f'Applying definitions to child objects: {name}')
+                        subval.applyDefinition(val.get(name, val))
+            else:
+                self._debug(0, 'applyDefinition', f'{key} = {val!r}')
+                setattr(self, key, val)
+
+                if key == 'default' and self.original is Null:
+                    self._debug(0, 'applyDefinition', f'Original is Null and default provided, setting original to default')
+                    setattr(self, 'original', val)
 
     def replace(self, value):
         """
@@ -307,3 +368,72 @@ class Var:
         if replacement is not value:
             self._debug(0, 'replace', f'Replacing {value!r} with {replacement!r}')
             return replacement
+
+    def getValue(self, default=True):
+        """
+        Returns this Var's value. If it is Null and default is enabled, returns the
+        default value instead.
+
+        Parameters
+        ----------
+        default: bool, default=True
+            If .value is Null, return .default
+            If this is false, always return .value
+        """
+        # If a user passes in a value to validate(), return that on any call to this function
+        # This helps registered functions retrieve a temporary value instead
+        if self._tmp_value is not Null:
+            return self._tmp_value
+
+        # Otherwise if default is enabled, return that
+        if default and self.value is Null:
+            return self.default
+
+        return self.value
+
+    def dumpYaml(self, key=None, **kwargs):
+        """
+        """
+        if key is None:
+            key = self.name
+
+        # Change the flag comment if set
+        flag = ' '
+        if self.required:
+            flag = '!'
+        else:
+            parent = self.parent
+            while parent is not Null:
+                if parent._defs.get('required'):
+                    flag = '?'
+                    break
+                parent = parent._prnt
+
+        value = self.getValue()
+        lines = []
+        if isinstance(value, list):
+            line = f'{key}:'
+            if value:
+                for val in value:
+                    if val is Null:
+                        # Replace Null values with backslash
+                        lines.append(['- \\'])
+                    elif hasattr(val, 'dumpYaml'):
+                        dump = val.dumpYaml('', string=False)
+                        dump[0][0] = '- ' + dump[0][0]
+                        lines += dump
+                    else:
+                        lines.append(['- ' + yaml.dump(val).split('\n')[0]])
+            else:
+                line = f'{key}: []'
+        else:
+            if value is Null:
+                value = '\\'
+            line = yaml.dump({key: value})[:-1]
+
+        # Apply spacing offset
+        if lines:
+            for i, child in enumerate(lines):
+                lines[i][0] = '  ' + child[0]
+
+        return [[line, flag, self.dtype or '', self.sdesc]] + lines

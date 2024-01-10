@@ -27,6 +27,23 @@ from ..utils.templates import yamlHeader
 Logger = logging.getLogger(__file__)
 
 
+def reportErrors(errors, offset=''):
+    """
+    Pretty prints an errors dictionary to logging.error
+    """
+    for key, errs in errors.items():
+        if key.startswith('.'):
+            name = key.split('.')[-1]
+            Logger.error(offset + f'.{name}')
+            reportErrors(errs, offset+'  ')
+        else:
+            if isinstance(errs, list):
+                for err in errs:
+                    Logger.error(offset + f'- {key}: {err}')
+            else:
+                Logger.error(offset + f'- {key}: {errs}')
+
+
 class Sect:
     # Default values for when a subclass isn't fully initialized
     _name = ""
@@ -95,6 +112,7 @@ class Sect:
 
         # Parse the input data from a supported type
         data = self.loadDict(data)
+        defs = self.loadDict(defs)
 
         self.__dict__['_name'] = name
         self.__dict__['_data'] = data
@@ -103,19 +121,18 @@ class Sect:
         self.__dict__['_prnt'] = parent
         self.__dict__['_chks'] = []
         self.__dict__['_sect'] = NullDict()
+        self.__dict__['_defs'] = {}
 
         if isinstance(data, dict):
             # if the input data is a dict, combine with kwargs to allow mix inputs eg. Sect({'a': 1}, b=2)
             for key, value in (kwargs | data).items():
-                self._setdata(key, value,
-                    defs = defs.get(f'.{key}', {})
-                )
+                self._setdata(key, value)
 
         elif isinstance(data, (list, tuple)):
             # Flag that this is a list-type Sect to change some downstream behaviours
             self.__dict__['_type'] = 'List'
             for i, value in enumerate(data):
-                self._setdata(i, value, defs=defs)
+                self._setdata(i, value)
 
         elif isinstance(data, Sect):
             super().__setattr__('__dict__', data.deepCopy().__dict__)
@@ -398,7 +415,7 @@ class Sect:
         args = dict(
             name   = name,
             data   = value,
-            defs   = defs,
+            # defs   = defs,
             debug  = self._dbug,
             parent = self
         )
@@ -470,13 +487,22 @@ class Sect:
         Sets keys from a definitions dictionary
         """
         value = Null
-        dtype = defs.get('dtype', 'dict')
+        dtype = defs.get('dtype')
 
-        # Children start with '.'
-        if any(key.startswith('.') for key in defs):
+        if dtype == 'list':
+            self.__dict__['_type'] = 'List'
+            copies  = range(defs.get('repeat', 0))
+            subdefs = defs.get('items', defs)
+            subval  = Null
+            if any(key.startswith('.') for key in subdefs):
+                subval = {}
+            value = [subval for _ in copies]
+
+        elif dtype == 'dict':
+            copies = defs.get('repeat', [])
+            value  = {key: {} for key in copies}
+        elif any(key.startswith('.') for key in defs):
             value = {}
-            if dtype == 'list':
-                value = [{} for _ in range(defs.get('repeat', 1))]
 
         self._log(1, '_setdefs', f'[{key!r}] = {value!r}, defs={defs}')
         self._setdata(key, value, defs=defs, missing=True)
@@ -524,6 +550,10 @@ class Sect:
                 else:
                     self._log(0, 'applyDefinition', f'Applying defs to key {key!r}')
                     self.get(key, var=True).applyDefinition(val)
+            elif key == 'items':
+                for name, child in self.items(var=True):
+                    self._log(0, 'applyDefinition', f'Applying defs to child {key!r}')
+                    child.applyDefinition(val)
 
     def deepUpdate(self):
         """
@@ -705,12 +735,11 @@ class Sect:
             else:
                 self._log('e', 'resetVars', f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
 
-    def dumpYaml(self, string=True):
+    def dumpYaml(self, key=Null, string=True, truncate=None):
         """
         Dumps this object as a YAML string.
 
-        Leverages the yaml.dump function to ensure 'key: value' are yaml
-        compatible
+        Leverages the yaml.dump function to ensure 'key: value' are yaml compatible
 
         Parameters
         ----------
@@ -718,6 +747,9 @@ class Sect:
             Converts the dump to a compatible YAML string. If false, returns
             the dump list which is a list of tuples where each tuple defines the
             column values for a given row
+        truncate: int, default=None
+            `truncate` argument of mlky.utils.printTable; only relevant if
+            `string=True`
 
         Notes
         -----
@@ -735,105 +767,52 @@ class Sect:
         passed to `mlky.utils.printTable()`. See `Sect.generateTemplate()` for
         more information about this.
         """
-        def rowFromSect(string, sect):
-            """
-            Reads a Sect and prepares a tuple that represents the row as the
-            following columns:
-                (string, flag, dtype, sdesc)
-            """
-            defs = sect._defs
+        defs  = self._defs
+        sdesc = defs.get('sdesc', '')
+        dtype = defs.get('dtype', self._type.lower())
 
-            sdesc = defs.get('sdesc', '')
-            dtype = defs.get('dtype', self._type.lower())
+        # ! = required, ? = optional under a required sect, ' ' = optional
+        flag = ' '
+        if defs.get('required'):
+            flag = '!'
+        else:
+            parent = self._prnt
+            while parent is not Null:
+                if parent._defs.get('required'):
+                    flag = '?'
+                    break
+                parent = parent._prnt
 
-            # ! = required, ? = optional under a required sect, ' ' = optional
-            flag = ' '
-            if defs.get('required'):
-                flag = '!'
+        if key is None:
+            key = self._f.name
+        if key is Null:
+            line = [['generated:', 'K', 'dtype', 'Short description']]
+        else:
+            if key == '':
+                line = ''
             else:
-                parent = sect._prnt
-                while parent is not Null:
-                    if parent._defs.get('required'):
-                        flag = '?'
-                        break
-                    parent = parent._prnt
+                line = f'{key}:'
+            line = [[line, flag, dtype, sdesc]]
 
-            return (string, flag, dtype, sdesc)
+        # Dump all child objects to yaml
+        lines = []
+        for name, child in self.items(var=True):
+            lines += child.dumpYaml(name, string=False)
 
+        # Apply offset
+        if lines:
+            for i, child in enumerate(lines):
+                lines[i][0] = '  ' + child[0]
 
-        def rowFromVar(var):
-            """
-            Reads a Var and prepares a tuple that represents the row as the
-            following columns:
-                (string, flag, dtype, sdesc)
-            where:
-                `string` is the "key: value" for this line
-                `flag` is one of:
-                    ` ` - Completely optional key
-                    `!` - Manually set value required
-                    `?` - Optional child key of some required parent section
-                `dtype` is the set data type for this key
-                `sdesc` is the short description
-
-            This list of tuples is then processed by utils.printTable() to the
-            columns in alignment as a valid yaml
-            """
-            # Set value if set, otherwise use default, replace Null with `\`
-            value  = '\\'
-            if var.value is not Null:
-                value = var.value
-            elif var.default is not Null:
-                value = var.default
-
-            flag = ' '
-            if var.required:
-                flag = '!'
-            else:
-                parent = var.parent
-                while parent is not Null:
-                    if parent._defs.get('required'):
-                        flag = '?'
-                        break
-                    parent = parent._prnt
-
-            # Use yaml to dump this correctly
-            if self._type == 'List':
-                strings = ['- ' + yaml.dump(value)[:-5]]
-            else:
-                strings = yaml.dump({key: value}).split('\n')[:-1]
-
-            # If this is a list value, there will be multiple lines
-            others = []
-            if len(strings) > 1:
-                offset = var._offset + '  '
-                others = [
-                    (offset+string, )
-                    for string in strings[1:]
-                ]
-
-            # The main key line
-            string = var._offset + strings[0]
-
-            return [(string, flag, var.dtype or '', var.sdesc)] + others
-
-
-        dump = [('generated:', 'K', 'dtype', 'Short description')]
-        for key, item in self._sect.items():
-            if isinstance(item, Sect):
-                # `key` is not in the item, create the "key: value" string for the row tuple
-                dump.append(rowFromSect(f'{item._offset}{key}:', item))
-                dump += item.dumpYaml(string=False)[1:]
-            elif isinstance(item, Var):
-                dump += rowFromVar(item)
-            else:
-                self._log('e', 'dumpYaml', f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
-
+        dump = line + lines
         if string:
             return '\n'.join(
                 printTable(dump, columns = {
                         0: {'delimiter': '#'},
                         1: {'delimiter': '|'},
-                    }, print=None
+                    },
+                    print    = None,
+                    truncate = truncate
                 )
             )
         return dump
@@ -900,3 +879,62 @@ class Sect:
 
         else:
             raise TypeError(f'Data input is not a supported type, got {type(data)!r} expected one of: {dtypes}')
+
+    def validate(self, report=True, asbool=True):
+        """
+        Validates a Sect and its children
+
+        Parameters
+        ----------
+        report: bool, default=True
+            Reports the (reduced) errors to logger.error in a pretty format
+        asbool: bool, default=True
+            Returns the errors dict as an inverted boolean, True for no errors, False for errors
+
+        Returns
+        -------
+        errors: dict
+            Errors dictionary that contains all the checks for each key. This is a
+            special dictionary that can be reduced using errors.reduce() to only see
+            checks that failed validation
+        """
+        defs = self._defs
+
+        # Find which children are assigned to each tag
+        tags = {}
+        for key in defs:
+            if not key.startswith('.'):
+                continue
+            for tag in defs[key].get('tags', []):
+                tags.setdefault(tag, []).append(key[1:])
+
+        errors = ErrorsDict()
+
+        # Now apply the check functions against the assigned tags
+        for check in defs.get('checks', []):
+            (check, args), = list(check.items())
+
+            if isinstance(args, str):
+                args = [args,]
+
+            for tag in args:
+                items = [self.get(key, var=True) for key in tags[tag]]
+
+                errors[f'{check}[{tag}]'] = funcs.getRegister(check)(items)
+
+        # Now validate children
+        for child in self.values(var=True):
+            name = child.name if isinstance(child, Var) else child._name
+            errors[name] = child.validate(report=False, asbool=False)
+
+        if report:
+            reduced = errors.reduce()
+            if reduced:
+                Logger.error('Errors discovered in the configuration:')
+                reportErrors(reduced, '  ')
+            else:
+                Logger.info('Configuration passed all checks')
+
+        if asbool:
+            return not bool(errors.reduce())
+        return errors
