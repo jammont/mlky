@@ -41,7 +41,10 @@ mpkg validate -f /some/config.yml [-i] -d /some/defs.yml [-di]
 """
 import click
 
-from . import generate
+from . import (
+    Config,
+    generate
+)
 
 #%%
 @click.group(invoke_without_command=True, name="config")
@@ -125,6 +128,31 @@ def click_validate(file, inherit, defs, defs_inherit):
     errors = config.validate_(_raise=False)
     if not errors:
         click.echo(f'No errors were found.')
+
+#%%
+@_cli.command(name="print")
+@click.option('-c', '--config',
+    help     = 'Configuration file input',
+    required = True
+)
+@click.option('-p', '--patch',
+    help     = 'Patch to apply'
+)
+@click.option('-d', '--defs',
+    help     = 'Definitions file to populate the config, if available',
+)
+@click.option('-t', '--truncate',
+    help     = 'Truncates long values for prettier printing',
+    type     = int
+)
+def click_print(config, patch, defs, truncate):
+    """\
+    Prints the yaml dump for a configuration with a given patch input
+    """
+    click.echo(f'YAML dump for Config(file={config!r}, patch={patch!r}, defs={defs!r})')
+    Config(config, patch, defs)
+    dump = Config.dumpYaml(truncate=truncate)
+    click.echo(dump)
 
 #%%
 class CLI:

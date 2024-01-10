@@ -67,9 +67,20 @@ def cpu_count(*args):
     """
     return os.cpu_count()
 
+@register(name='nan')
+def nan(*args):
+    """
+    Replaces ${!nan} with float('nan')
+
+    Returns
+    -------
+    float
+        NaN
+    """
+    return float('NaN')
 
 @register()
-def oneof(var, *options, regex=False):
+def oneof(var, *opts, options=[], regex=False):
     """
     Checks if a given value is one of a list of options
 
@@ -77,6 +88,8 @@ def oneof(var, *options, regex=False):
     ----------
     var: mlky.Var
         Checks the var.value against `options`
+    *opts: list
+        Captures options passed in without the keyword
     options: list
         List of objects to check if `value` is in
     regex: bool, defaults=False
@@ -89,7 +102,8 @@ def oneof(var, *options, regex=False):
         Returns True if `value` is oneof `options`, otherwise return an error
         message as a string
     """
-    value = var.value
+    value   = var.getValue()
+    options = opts or options
     if regex:
         for opt in options:
             if re.search(opt.replace('//', '/'), value):
@@ -139,7 +153,12 @@ def isdir(var):
     bool or str
         Returns True if the path exists, otherwise returns an error string
     """
-    path = var.value
+    path = var.getValue()
+    if path is Null:
+        if var.strict or var.required:
+            return f'Directory path not provided'
+        else:
+            return True
     return os.path.isdir(path) or f'Directory Not Found: {path}'
 
 
@@ -158,7 +177,12 @@ def isfile(var):
     bool or str
         Returns True if the path exists, otherwise returns an error string
     """
-    path = var.value
+    path = var.getValue()
+    if path is Null:
+        if var.strict or var.required:
+            return f'File path not provided'
+        else:
+            return True
     return os.path.isfile(path) or f'File Not Found: {path}'
 
 
@@ -170,7 +194,7 @@ def compare(var, lt=None, lte=None, gt=None, gte=None):
     var: mlky.Var
         The Var object to compare with
     """
-    value  = var.value
+    value  = var.getValue()
     errors = []
     if lt is not None:
         if not value < lt:
@@ -237,9 +261,21 @@ def one_valid(items):
     """
     ov = False # One Valid
     for item in items:
+        # Update the Var to ensure checks are properly done
+        item._skip_checks = False
+        item.strict = True
+
+        # Check if it is valid, record True to OV if any one is
         err = item.validate().reduce()
         ov |= not err
-    return ov or f'At least one key must be valid and none are: {keys}'
+
+    if ov:
+        # All future checks should be skipped as one was valid
+        for item in items:
+            item._skip_checks = True
+        return True
+
+    return f'At least one key must be valid and none are: {[k.name for k in items]}'
 
 
 @register()

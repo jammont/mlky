@@ -101,11 +101,11 @@ def replace(value, instance=None):
 
             # Lookup custom function case
             elif match.startswith('?'):
-                data = funcs.getRegister(match[1:])
+                data = funcs.getRegister(match[1:])()
 
             # Data lookup case
             elif match.startswith('!'):
-                return funcs.getRegister(match[1:])
+                return funcs.getRegister(match[1:])()
 
             else:
                 Logger.warning(f'Replacement matched to string but no valid starter token provided: {match!r}')

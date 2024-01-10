@@ -3,7 +3,7 @@ Pretty printers
 """
 
 
-def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', print=print, columns={}, _i=0):
+def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', truncate=None, print=print, columns={}, _i=0):
     """
     Parameters can be set on a per column basis using the columns parameter. This is a
     dictionary of column indices as keys and the parameters for that column as the
@@ -22,6 +22,8 @@ def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', print=
         Defaults to 1, eg: "key ="
     prepend: str, default=''
         Any string to prepend to each line
+    truncate: int, default=None
+        Truncates a value to a provided length for prettier printing
     print: func, default=print
         The print function to use. Allows using custom function instead of Python's normal print
     columns: dict, default={}
@@ -38,6 +40,7 @@ def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', print=
     args      = columns.get(_i, {})
     delimiter = args.get('delimiter', delimiter)
     offset    = args.get('offset'   , offset   )
+    truncate  = args.get('truncate' , truncate )
 
     # Left and right side of the delimiter for this column
     left  = []
@@ -49,6 +52,8 @@ def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', print=
 
     if not left:
         return []
+    elif isinstance(truncate, int):
+        left = [item[:truncate] for item in left]
 
     padding   = max([0, max(map(len, left))]) + offset
     formatter = prepend
