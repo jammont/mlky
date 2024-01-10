@@ -68,6 +68,7 @@ class Var:
         self.sdesc    = sdesc
         self.ldesc    = ldesc
         self.parent   = parent
+        self.original = value
 
         if replace and not missing:
             # This will call replace() then validate()
@@ -75,8 +76,6 @@ class Var:
         else:
             # No replace(), takes as-is
             super().__setattr__('value', value)
-
-        self.original = self.getValue()
 
     def __eq__(self, other):
         data = self.toDict()
