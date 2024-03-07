@@ -8,3 +8,6 @@ __pycache__
 # builds
 build/
 dist/
+
+# MKDocs
+site/
