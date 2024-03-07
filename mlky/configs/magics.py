@@ -16,7 +16,7 @@ Logger = logging.getLogger(__file__)
 
 
 @register(name='config.replace')
-def replace(value, instance=None):
+def replace(value, instance=None, dtype=None):
     """
     Replaces format signals in strings with values from the config relative to
     its inheritance structure.
@@ -28,11 +28,13 @@ def replace(value, instance=None):
         corrosponding config value. See notes the regex for accuracy.
     instance: Sect, defaults=None
         Instance to use for value lookups. Defaults to the global instance
+    dtype: any, defaults=None
+        Data type to attempt casting the replacement value to
 
     Returns
     -------
-    string: str
-        Same string but with the values replaced.
+    value: any
+        Replaced value
 
     Notes
     -----
@@ -111,6 +113,18 @@ def replace(value, instance=None):
                 Logger.warning(f'Replacement matched to string but no valid starter token provided: {match!r}')
 
             value = value.replace('${'+ match +'}', str(data))
+
+    if dtype:
+        if isinstance(dtype, list):
+            Logger.debug(f'Cannot cast replacement value {value!r} as the dtype is a list and cannot be assumed: {dtype=}')
+        elif dtype in (list, tuple):
+            # Logger.debug(f'List dtype casting is not supported')
+            pass
+        else:
+            try:
+                value = dtype(value)
+            except:
+                Logger.error(f'Failed to cast replacement value {value!r} to {dtype=}')
 
     return value
 

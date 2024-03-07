@@ -59,7 +59,8 @@ class Sect:
         # TODO: (Doc this better) Not converting list types will prevent the ability to patch them, values for these keys will simply be replaced on patch
         convertListTypes = True,
         convertItems     = True,
-        VarsReplaceInit  = True
+        VarsReplaceInit  = True,
+        Var              = Var # Passthrough to access Var options via this dict
     )
 
     # Class defaults, change these manually via Sect.__dict__[key] = ...
