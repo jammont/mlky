@@ -1,1 +1,2 @@
 mkdocstrings
+pytkdocs[numpy-style]
