@@ -1,4 +1,7 @@
 site_name: mlky
+repo_name: jammont/mlky
+repo_url: https://github.com/jammont/mlky
+docs_dir: docs/
 theme:
   name: material
 plugins:
