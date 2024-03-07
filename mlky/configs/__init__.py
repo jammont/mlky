@@ -1,6 +1,9 @@
 """
 Order of operations matter due to dependencies
 """
+# Regex string for matching to mlky magics
+magic_regex = r"\${([\.\$\!].*?)}"
+
 # Independent
 from .null import (
     Null,

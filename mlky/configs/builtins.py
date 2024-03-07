@@ -339,5 +339,5 @@ def check_dtype(value, dtype):
         check = isinstance(value, dtype)
 
     if check is False:
-        return f'Wrong type: Expected <{dtype!r}> Got {type(value)}'
+        return f'Wrong type: Expected {dtype!r} Got {type(value)}'
     return check

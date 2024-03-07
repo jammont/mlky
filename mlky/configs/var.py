@@ -3,11 +3,13 @@ Var objects are containers to hold values of a mlky Sect
 """
 import copy
 import logging
+import re
 import yaml
 
 from . import (
     ErrorsDict,
     funcs,
+    magic_regex,
     Null
 )
 
@@ -38,6 +40,9 @@ class Var:
 
     # .reset() will replace magic strings "${...}", this will disable that
     _disable_reset_magics = False
+
+    # Will only call replace on magic strings, not any value
+    _replace_only_if_magic = True
 
     # Assists getValue() to retrieve a temporary value without setting it as .value
     _tmp_value = Null
@@ -375,6 +380,11 @@ class Var:
 
         Work in progress
         """
+        # Call replacement on string types only if option is set
+        if self._replace_only_if_magic:
+            if not isinstance(value, str) or not re.match(magic_regex, value):
+                return
+
         # Find the root parent
         parent = self.parent
         while parent._prnt:

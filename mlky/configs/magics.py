@@ -7,6 +7,7 @@ import re
 from . import (
     Config,
     funcs,
+    magic_regex,
     Null,
     register
 )
@@ -79,7 +80,7 @@ def replace(value, instance=None, dtype=None):
         if value == '\\':
             return Null
 
-        matches = re.findall(r"\${([\.\$\!].*?)}", value)
+        matches = re.findall(magic_regex, value)
 
         for match in matches:
             # Config lookup case
