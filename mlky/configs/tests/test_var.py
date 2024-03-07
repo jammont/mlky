@@ -14,14 +14,15 @@ from mlky import (
 @pytest.mark.parametrize("name,key,value,dtype,checks,errors", [
     ('.1', 'one'  , 1, 'None', [{'oneof': [0, 1, 2]}], {}),
     ('.2', 'two'  , 2, 'any' , [{'oneof': [0, 2, 4]}], {}),
-    ('.3', 'three', 3, 'int' , [{'oneof': [0, 2, 4]}], {'oneof': 'Invalid option: 3, should be one of: (0, 2, 4)'}),
-    ('.4', 'four' , 4, 'str' , [{'oneof': [0, 4, 8]}], {'type': "Wrong type: Expected <'str'> Got <class 'int'>"})
+    ('.3', 'three', 3, int   , [{'oneof': [0, 2, 4]}], {'oneof': 'Invalid option: 3, should be one of: (0, 2, 4)'}),
+    ('.4', 'four' , 4, str   , [{'oneof': [0, 4, 8]}], {'type': "Wrong type: Expected <class 'str'> Got <class 'int'>"})
 ])
 def test_Var(name, key, value, dtype, checks, errors):
     """
     Tests initialization and briefly validation
     """
     v = Var(name=name, key=key, value=value, dtype=dtype, checks=checks)
+
     assert str(v)   == f'<Var({key}={value})>', f'Var str() broken, expected "<Var({key}={value})>" got {str(v)}'
     assert v.name   == name,   f'Bad attribute "name", expected {name} got {v.name}'
     assert v.key    == key,    f'Bad attribute "key", expected {key} got {v.key}'

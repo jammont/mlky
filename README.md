@@ -72,13 +72,13 @@ def get_param(key, local=False):
   config = Config(local=local)
   return config[key]
 
->>> set_param('persist', True)
->>> get_param('persist')
+>>> set_param('persist', True) # Global
+>>> get_param('persist') # Global
 True
 >>> set_param('local', True, local=True)
 >>> get_param('local')
 Null
->>> get_param('persist', local=True)
+>>> get_param('persist', local=True) # Copies global instance
 True
 ```
 

@@ -41,10 +41,7 @@ mpkg validate -f /some/config.yml [-i] -d /some/defs.yml [-di]
 """
 import click
 
-from . import (
-    Config,
-    generate
-)
+from . import Config
 
 #%%
 @click.group(invoke_without_command=True, name="config")
@@ -66,40 +63,34 @@ def _cli(ctx, version, path):
 
 #%%
 @_cli.command(name="generate")
-@click.option('-f', '--file',
-    help         = 'File to write the generated YAML to.',
-    required     = True
+@click.option("-f", "--file",
+    help    = "File to write the template to",
+    default = "generated.yml"
 )
-@click.option('-d', '--defs',
-    help         = 'Definitions file to generate from.',
-    required     = True,
-    default      = '',
-    show_default = True
+@click.option("-d", "--defs",
+    help    = "Definitions file",
+    default = "defs.yml"
 )
-@click.option('-s', '--style',
-    help         = 'Style to generate the output as.',
-    type         = click.Choice(['full'], case_sensitive=False),
-    default      = 'full',
-    show_default = True
+@click.option("-clt", "--convertListTypes",
+    help    = "Enables converting list types to dicts",
+    is_flag = True,
+    default = False
 )
-@click.option('-c', '--comments',
-    help         = 'Style to write the comments for each option.',
-    type         = click.Choice(['inline', 'coupled', 'none'], case_sensitive=False),
-    default      = 'inline',
-    show_default = True
+@click.option("-dmr", "--disableMagicsReplacement",
+    help    = "Disables the default behaviour of replacing magics. Disabling this may result in the generated file containing magic strings.",
+    is_flag = True,
+    default = False
 )
-def click_generate(defs, file, style, comments):
+def generate(file, defs, convertlisttypes, disablemagicsreplacement):
     """\
-    Generates a config template from a definitions file
+    Generates a default config template using the definitions file
     """
-    lines = generate(
-        defs     = defs,
-        file     = file,
-        style    = style,
-        comments = comments
-    )
-    string = '\n'.join(lines)
-    click.echo(f'Generate template(style={style}, comments={comments}) to {file}')
+    Config._opts.convertListTypes = convertlisttypes
+    Config._opts.Var._disable_reset_magics = disablemagicsreplacement
+
+    Config(data={}, defs=defs)
+    Config.generateTemplate(file=file)
+    click.echo(f"Wrote template configuration to: {file}")
 
 #%%
 @_cli.command(name="validate")
@@ -161,7 +152,7 @@ class CLI:
     changes need to happen, import this class and use the attributes
     """
     group    = _cli
-    generate = click_generate
+    generate = generate
 
     @classmethod
     def set_defaults(cls, **kwargs):

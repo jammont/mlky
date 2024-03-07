@@ -3,17 +3,30 @@ Var objects are containers to hold values of a mlky Sect
 """
 import copy
 import logging
+import re
 import yaml
 
 from . import (
     ErrorsDict,
     funcs,
+    magic_regex,
     Null
 )
 
 
 Logger = logging.getLogger(__file__)
-
+Types  = {
+    'bool'   : bool,
+    'bytes'  : bytes,
+    'complex': complex,
+    'dict'   : dict,
+    'float'  : float,
+    'int'    : int,
+    'list'   : list,
+    'set'    : set,
+    'str'    : str,
+    'tuple'  : tuple
+}
 
 class Var:
     value    = Null
@@ -24,6 +37,12 @@ class Var:
 
     # Special flag to indicate when to skip checks
     _skip_checks = False
+
+    # .reset() will replace magic strings "${...}", this will disable that
+    _disable_reset_magics = False
+
+    # Will only call replace on magic strings, not any value
+    _replace_only_if_magic = True
 
     # Assists getValue() to retrieve a temporary value without setting it as .value
     _tmp_value = Null
@@ -148,6 +167,10 @@ class Var:
             errs = self.validate(value).reduce()
             if errs:
                 Logger.error(f'Changing the value of this Var({self.name}) to will cause validation to fail. See var.validate() for errors')
+
+        elif key == 'dtype':
+            # Replace string dtypes with actual types, else fallback to a registered function, else just whatever was given
+            value = Types.get(value, funcs.Funcs.get(value, value))
 
         super().__setattr__(key, value)
 
@@ -327,8 +350,9 @@ class Var:
             self._debug(0, 'reset', f'Resetting from {value} to {self.original}')
             self.value = self.original
         elif isinstance(value, str) and value.startswith('$'):
-            self._debug(0, 'reset', f'Current value is a magic, resetting to call replacement')
-            self.value = value
+            if not self._disable_reset_magics:
+                self._debug(0, 'reset', f'Current value is a magic, resetting to call replacement')
+                self.value = value
 
     def applyDefinition(self, defs):
         """
@@ -356,6 +380,11 @@ class Var:
 
         Work in progress
         """
+        # Call replacement on string types only if option is set
+        if self._replace_only_if_magic:
+            if not isinstance(value, str) or not re.match(magic_regex, value):
+                return
+
         # Find the root parent
         parent = self.parent
         while parent._prnt:
@@ -364,7 +393,7 @@ class Var:
         # TODO: This is broken, just default to the global instance until further research
         parent = None
 
-        replacement = funcs.getRegister('config.replace')(value, parent)
+        replacement = funcs.getRegister('config.replace')(value, parent, dtype=self.dtype)
         if replacement is not value:
             self._debug(0, 'replace', f'Replacing {value!r} with {replacement!r}')
             return replacement

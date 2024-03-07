@@ -6,6 +6,8 @@ import os
 import re
 import uuid
 
+from types import FunctionType
+
 from . import (
     funcs,
     Null,
@@ -293,26 +295,8 @@ def mutually_exclusive(items):
     return True
 
 
-## Builtin provided type functions
-# More types can be added by importing this dict and appending to it
-# Or by registering a function with the same name as the type
-Types = {
-    Null     : lambda value: True,
-    'Null'   : lambda value: True,
-    None     : lambda value: True,
-    'None'   : lambda value: True,
-    'any'    : lambda value: True,
-    'bool'   : lambda value: isinstance(value, bool   ),
-    'bytes'  : lambda value: isinstance(value, bytes  ),
-    'complex': lambda value: isinstance(value, complex),
-    'dict'   : lambda value: isinstance(value, dict   ),
-    'float'  : lambda value: isinstance(value, float  ),
-    'int'    : lambda value: isinstance(value, int    ),
-    'list'   : lambda value: isinstance(value, list   ),
-    'set'    : lambda value: isinstance(value, set    ),
-    'str'    : lambda value: isinstance(value, str    ),
-    'tuple'  : lambda value: isinstance(value, tuple  )
-}
+# dtypes assigned to these values always pass checks
+Typeless = (Null, 'Null', None, 'None', 'any')
 
 @register()
 def check_dtype(value, dtype):
@@ -335,20 +319,25 @@ def check_dtype(value, dtype):
         Returns True if this value is the expected type. If it is not, returns
         either a string or list of strings describing the error.
     """
+    if dtype in Typeless:
+        return True
+
     if isinstance(dtype, list):
         if True not in [check_type(value, t) for t in dtype]:
             return f'Value type <{dtype!r}> is not one of {dtype}'
         return True
 
-    # Try a builtin then fallback to custom registered
-    func = Types.get(dtype, funcs.Funcs.get(dtype))
-    if func is None:
+    # Use a custom function to check the type
+    if isinstance(dtype, FunctionType):
+        check = dtype(value)
+
+    # If not a function, this must be a python-registered type
+    elif not isinstance(dtype, type):
         return f'Unknown type: {dtype!r}'
 
-    ret = func(value)
-    if ret is True:
-        return True
-    if isinstance(ret, (str, list)):
-        return ret
     else:
-        return f'Wrong type: Expected <{dtype!r}> Got {type(value)}'
+        check = isinstance(value, dtype)
+
+    if check is False:
+        return f'Wrong type: Expected {dtype!r} Got {type(value)}'
+    return check
