@@ -98,8 +98,8 @@ def generate(file, defs, convertlisttypes, disablemagicsreplacement):
     help         = 'File to validate.',
     required     = True
 )
-@click.option('-i', '--inherit',
-    help         = 'Inheritance to use for the input config.',
+@click.option('-p', '--patch',
+    help         = 'Patch to apply'
 )
 @click.option('-d', '--defs',
     help         = 'Definitions file for validation.',

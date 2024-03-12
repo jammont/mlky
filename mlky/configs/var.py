@@ -426,6 +426,12 @@ class Var:
         if key is None:
             key = self.name
 
+        # Cast dtype back to str name
+        dtype = self.dtype
+        if isinstance(dtype, type):
+            if (match := re.match(r"<class '(\w+)'>", str(dtype))):
+                dtype = match.groups()[0]
+
         # Change the flag comment if set
         flag = ' '
         if self.required:
@@ -465,4 +471,4 @@ class Var:
             for i, child in enumerate(lines):
                 lines[i][0] = '  ' + child[0]
 
-        return [[line, flag, self.dtype or '', self.sdesc]] + lines
+        return [[line, flag, dtype or '', self.sdesc]] + lines
