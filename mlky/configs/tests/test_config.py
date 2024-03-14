@@ -3,7 +3,10 @@ Tests the mlky Config class
 """
 import pytest
 
-from mlky import Config
+from mlky import (
+    Config,
+    Null
+)
 
 
 def test_init():
@@ -92,3 +95,50 @@ def test_replace():
     C = Config({'a': '${.b}', 'b': 2})
     assert C.a == '2'
     assert C.b == 2
+
+
+YAML = """\
+a: \\
+b: //
+d: -1
+e: -1
+"""
+
+DEFS = """\
+.a:
+    dtype: str
+.b:
+    dtype: str
+.c:
+    dtype: str
+    default: C
+.d:
+    dtype: int
+.e:
+    dtype: float
+.f:
+    dtype: str
+"""
+
+def test_replace():
+    """
+    Test function to validate the behavior of the 'replace' function.
+
+    This function creates a 'Config' instance using the provided YAML data and definitions.
+    It then asserts various attributes of the 'Config' instance to ensure proper replacement.
+
+    Asserts
+    -------
+    - 'a' should be Null
+    - 'b' should be '//'
+    - 'c' should be 'C' (default value)
+    - 'd' should be -1
+    - 'e' should be -1. (float type)
+    """
+    Config(data=YAML, defs=DEFS)
+
+    assert Config.a is Null
+    assert Config.b == '//'
+    assert Config.c == 'C'
+    assert Config.d == -1
+    assert Config.e == -1.
