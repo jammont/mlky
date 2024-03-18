@@ -384,7 +384,7 @@ class Var:
         Work in progress
         """
         # Allow "\" values to be passed through to the replace function which will be replaced with Null
-        if self._replace_slash_null and value == '\\':
+        if self._replace_slash_null and isinstance(value, str) and value == '\\':
             pass
 
         # Call replacement on string types only if option is set
