@@ -383,14 +383,19 @@ class Var:
 
         Work in progress
         """
-        # Allow "\" values to be passed through to the replace function which will be replaced with Null
-        if self._replace_slash_null and isinstance(value, str) and value == '\\':
-            pass
+        if isinstance(value, str):
+            # Allow "\" values to be passed through to the replace function which will be replaced with Null
+            if self._replace_slash_null and value == '\\':
+                pass
+
+            # Ensure a string has a magic
+            elif self._replace_only_if_magic:
+                if not re.findall(magic_regex, value):
+                    return
 
         # Call replacement on string types only if option is set
         elif self._replace_only_if_magic:
-            if not isinstance(value, str) or not re.match(magic_regex, value):
-                return
+            return
 
         # Find the root parent
         parent = self.parent
