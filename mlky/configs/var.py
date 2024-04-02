@@ -173,7 +173,10 @@ class Var:
 
         elif key == 'dtype':
             # Replace string dtypes with actual types, else fallback to a registered function, else just whatever was given
-            value = Types.get(value, funcs.Funcs.get(value, value))
+            if isinstance(value, list):
+                value = [Types.get(val, funcs.Funcs.get(val, val)) for val in value]
+            else:
+                value = Types.get(value, funcs.Funcs.get(value, value))
 
         super().__setattr__(key, value)
 
@@ -252,7 +255,7 @@ class Var:
     def deepCopy(self, memo=None):
         return copy.deepcopy(self, memo)
 
-    def checkType(self, value=Null):
+    def checkType(self, value=Null, strict=False):
         """
         Checks a given value against the type set for this object.
 
@@ -260,20 +263,22 @@ class Var:
         ----------
         value: any, default=Null
             Value to test against. If left as default Null, will use the Var.value
+        strict: bool, defaults=False
+            Sets strict for this call only
         """
         if value is Null:
             value = self.getValue()
 
         if all([
-            not self.strict,        # Strict cases always check dtype
-            not self.required, # Not required to be set
-            value is Null      # Already a null value, possibly inherently null
+            not (self.strict or strict), # Strict cases always check dtype
+            not self.required,           # Not required to be set
+            value is Null                # Already a null value, possibly inherently null
         ]):
             return True
 
         return funcs.getRegister('check_dtype')(value, self.dtype)
 
-    def validate(self, value=Null, **kwargs):
+    def validate(self, value=Null, strict=False, **kwargs):
         """
         Validates a value against this variable's checks
 
@@ -281,6 +286,8 @@ class Var:
         ----------
         value: any, defaults=Null
             Value to validate. If left as default Null, will use the Var.value
+        strict: bool, defaults=False
+            Sets strict for this call only
 
         Returns
         -------
@@ -308,14 +315,14 @@ class Var:
             return errors
 
         # Don't run any checks if the key was missing
-        if self.missing and not self.strict:
+        if self.missing and not (self.strict or strict):
             if self.required:
                 errors['required'] = 'This key is required to be manually set in the config'
             self._debug(0, 'validate', f'This Var is missing and not strict')
             return errors
 
         # Check the type before anything else
-        errors['type'] = self.checkType(value)
+        errors['type'] = self.checkType(value, strict)
 
         for check in self.checks:
             args   = []
