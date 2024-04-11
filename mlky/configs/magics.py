@@ -9,15 +9,25 @@ from . import (
     funcs,
     magic_regex,
     Null,
-    register
+    register,
+    Var
 )
 
 
 Logger = logging.getLogger(__file__)
 
 
+def _debug(lvl, name, msg):
+    """
+    """
+    if lvl == 'e':
+        Logger.error(msg)
+    else:
+        Logger.warning(msg)
+
+
 @register(name='config.replace')
-def replace(value, instance=None, dtype=None):
+def replace(value, instance=None, dtype=None, callResets=False, _debug=_debug):
     """
     Replaces format signals in strings with values from the config relative to
     its inheritance structure.
@@ -31,6 +41,10 @@ def replace(value, instance=None, dtype=None):
         Instance to use for value lookups. Defaults to the global instance
     dtype: any, defaults=None
         Data type to attempt casting the replacement value to
+    callResets: bool, defaults=False
+        Calls reset on retrieved Vars. Warning: This may cause a recursive loop. Experimental.
+    _debug: function
+        Sect or Var ._debug() function for debug logging
 
     Returns
     -------
@@ -88,15 +102,22 @@ def replace(value, instance=None, dtype=None):
                 keys = match.split('.')
 
                 if len(keys) < 2:
-                    Logger.error(f'Keys path provided is invalid, returning without replacement: {keys!r}')
+                    _debug('e', 'replace', f'Keys path provided is invalid, returning without replacement: {keys!r}')
                     return value
 
                 data = instance or Config
                 for key in keys[1:]:
-                    data = data.__getattr__(key)
+                    data = data.get(key, other=Null, var=True)
+
+                if isinstance(data, Var):
+                    if callResets:
+                        _debug(0, 'replace', f'Calling reset from magics.replace on {data.name}')
+                        data.reset()
+
+                    data = data.getValue()
 
                 if isinstance(data, Null):
-                    Logger.warning(f'Lookup({match}) returned Null. This may not be expected and may cause issues.')
+                    _debug(0, 'replace', f'Lookup({match}) returned Null. This may not be expected and may cause issues.')
 
             # Environment variable lookup case
             elif match.startswith('$'):
@@ -111,13 +132,13 @@ def replace(value, instance=None, dtype=None):
                 return funcs.getRegister(match[1:])()
 
             else:
-                Logger.warning(f'Replacement matched to string but no valid starter token provided: {match!r}')
+                _debug(0, 'replace', f'Replacement matched to string but no valid starter token provided: {match!r}')
 
             value = value.replace('${'+ match +'}', str(data))
 
     if dtype:
         if isinstance(dtype, list):
-            Logger.debug(f'Cannot cast replacement value {value!r} as the dtype is a list and cannot be assumed: {dtype=}')
+            _debug(0, 'replace', f'Cannot cast replacement value {value!r} as the dtype is a list and cannot be assumed: {dtype=}')
         elif dtype in (list, tuple):
             # Logger.debug(f'List dtype casting is not supported')
             pass
@@ -125,7 +146,7 @@ def replace(value, instance=None, dtype=None):
             try:
                 value = dtype(value)
             except:
-                Logger.error(f'Failed to cast replacement value {value!r} to {dtype=}')
+                _debug('e', 'replace', f'Failed to cast replacement value {value!r} to {dtype=}')
 
     return value
 

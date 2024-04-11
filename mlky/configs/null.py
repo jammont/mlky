@@ -97,7 +97,7 @@ class NullType(type):
     def __repr__(cls):
         return 'Null'
 
-    def get(self, key, other=None):
+    def get(self, key, other=None, **kwargs):
         return other
 
     def keys(self):

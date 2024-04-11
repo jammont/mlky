@@ -56,6 +56,9 @@ class Var:
     # Will only call replace on magic strings, not any value
     _replace_only_if_magic = True
 
+    # Recursively call replace so values get populated correctly no matter order of operation
+    _replace_recursively = True
+
     # Replace backslashes "\" with Null
     _replace_slash_null = True
 
@@ -187,10 +190,10 @@ class Var:
             if errs:
                 Logger.error(f'Changing the value of this Var({self.name}) to will cause validation to fail. See var.validate() for errors')
 
-
         elif key == 'dtype':
             value = getType(value)
 
+        # Cast subtype dtypes to real types
         elif key == 'subtypes':
             for sub in value:
                 if 'dtype' not in sub:
@@ -437,7 +440,7 @@ class Var:
         # TODO: This is broken, just default to the global instance until further research
         parent = None
 
-        replacement = funcs.getRegister('config.replace')(value, parent, dtype=self.dtype)
+        replacement = funcs.getRegister('config.replace')(value, parent, dtype=self.dtype, callResets=self._replace_recursively, _debug=self._debug)
         if replacement is not value:
             self._debug(0, 'replace', f'Replacing {value!r} with {replacement!r}')
             return replacement
