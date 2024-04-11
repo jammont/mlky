@@ -27,6 +27,18 @@ Types  = {
     'str'    : str,
     'tuple'  : tuple
 }
+TypeNames = {v: k for k, v in Types.items()}
+
+
+def getType(dtype):
+    """
+    Helper function to convert strings to actual types
+    """
+    # Get actual type, else fallback to a registered function, else the parameter itself
+    if isinstance(dtype, list):
+        return [Types.get(val, funcs.Funcs.get(val, val)) for val in dtype]
+    return Types.get(dtype, funcs.Funcs.get(dtype, dtype))
+
 
 class Var:
     value    = Null
@@ -53,7 +65,9 @@ class Var:
     def __init__(self, name, key,
         value    = Null,
         default  = Null,
+        example  = Null,
         dtype    = Null,
+        subtypes = Null,
         required = False,
         missing  = False,
         checks   = [],
@@ -81,7 +95,9 @@ class Var:
         self.name     = name
         self.key      = key
         self.default  = default
+        self.example  = example
         self.dtype    = dtype
+        self.subtypes = subtypes
         self.required = required
         self.missing  = missing
         self.checks   = checks
@@ -171,12 +187,18 @@ class Var:
             if errs:
                 Logger.error(f'Changing the value of this Var({self.name}) to will cause validation to fail. See var.validate() for errors')
 
+
         elif key == 'dtype':
-            # Replace string dtypes with actual types, else fallback to a registered function, else just whatever was given
-            if isinstance(value, list):
-                value = [Types.get(val, funcs.Funcs.get(val, val)) for val in value]
-            else:
-                value = Types.get(value, funcs.Funcs.get(value, value))
+            value = getType(value)
+
+        elif key == 'subtypes':
+            for sub in value:
+                if 'dtype' not in sub:
+                    msg = f'Defs keys with multiple types must define the dtype for each explicitly. Missing for {key}[{i}]'
+                    self._log('e', '__setattr__', msg)
+                    raise AttributeError(msg)
+
+                sub['dtype'] = getType(sub['dtype'])
 
         super().__setattr__(key, value)
 
@@ -228,8 +250,11 @@ class Var:
         """
         Formats debug messages
         """
-        if level in self.debug or func in self.debug:
-            Logger.debug(f'{self._offset}<{type(self).__name__}>({self.name}).{func}() {msg}')
+        message = f'{self._offset}<{type(self).__name__}>({self.name}).{func}() {msg}'
+        if level == 'e':
+            Logger.error(message)
+        elif level in self.debug or func in self.debug:
+            Logger.debug(message)
 
     def _update(self, key, parent):
         """
@@ -417,7 +442,7 @@ class Var:
             self._debug(0, 'replace', f'Replacing {value!r} with {replacement!r}')
             return replacement
 
-    def getValue(self, default=True):
+    def getValue(self, default=True, example=False):
         """
         Returns this Var's value. If it is Null and default is enabled, returns the
         default value instead.
@@ -427,7 +452,12 @@ class Var:
         default: bool, default=True
             If .value is Null, return .default
             If this is false, always return .value
+        example: bool, default=False
+            Override and return the example value
         """
+        if example:
+            return self.example
+
         # If a user passes in a value to validate(), return that on any call to this function
         # This helps registered functions retrieve a temporary value instead
         if self._tmp_value is not Null:
@@ -439,17 +469,52 @@ class Var:
 
         return self.value
 
-    def dumpYaml(self, key=None, **kwargs):
+    def getSubType(self, value):
         """
+        Retrieves the subtype definition if the input value matches to one
+
+        Parameters
+        ----------
+        value: any
+            Value to check
+
+        Returns
+        -------
+        False or dict
+            The defs dict for the subtype if it matches the value type, False otherwise
+        """
+        for sub in self.subtypes:
+            if isinstance(value, sub['dtype']):
+                return sub
+        return False
+
+    def dumpYaml(self, key=None, example=False, **kwargs):
+        """
+        Serialize the object to YAML format.
+
+        Parameters
+        ----------
+        key: str or None, optional
+            The key to use in the YAML output. If None, the name of the object will be used as the key.
+        example: bool, default=False
+            Use example values instead of actual or default values
+        **kwargs: dict
+            Ignore other kwargs that may be passed by a Sect parent but are unused by Var objects
+
+        Returns
+        -------
+        list
+            A list containing the YAML representation of the object
         """
         if key is None:
             key = self.name
 
         # Cast dtype back to str name
         dtype = self.dtype
-        if isinstance(dtype, type):
-            if (match := re.match(r"<class '(\w+)'>", str(dtype))):
-                dtype = match.groups()[0]
+        if isinstance(dtype, list):
+            dtype = ', '.join([TypeNames.get(item, str(item)) for item in dtype])
+        else:
+            dtype = TypeNames.get(dtype, str(dtype))
 
         # Change the flag comment if set
         flag = ' '
@@ -463,9 +528,20 @@ class Var:
                     break
                 parent = parent._prnt
 
-        value = self.getValue()
+        value = self.getValue(example=example)
+
         lines = []
-        if isinstance(value, list):
+        if example:
+            # Multiple examples
+            if isinstance(value, list):
+                for val in value:
+                    if isinstance(val, dict):
+                        ...
+            else:
+                line = yaml.dump({key: value})[:-1]
+
+
+        elif isinstance(value, list):
             line = f'{key}:'
             if value:
                 for val in value:

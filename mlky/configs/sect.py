@@ -438,6 +438,12 @@ class Sect:
             self._log(2, '_setdata', f'Setting new Sect [{key!r}] = Sect({value}, defs={defs})')
             self._sect[key] = Sect(**args, **kwargs)
 
+        # Check if this is a Var and has multiple types
+        elif isinstance(data, Var) and (sub := data.getSubType(value)):
+            self._log(2, '_setdata', f"Updating existing Var [{key!r}] to subtype {sub['dtype']}")
+            data.applyDefinition(sub)
+            data.value = value
+
         # List types may be Sects, depends on options set
         elif isinstance(value, (list, tuple)):
             # if convertListTypes then we set a Sect, all other option combinations create a Var
@@ -483,14 +489,38 @@ class Sect:
             self._log(2, '_setdata', f'[{key!r}] Applying defs: {defs}')
             self._sect[key].applyDefinition(defs)
 
+        # Return the object for further operations
+        return self._sect[key]
+
     def _setdefs(self, key, defs):
         """
         Sets keys from a definitions dictionary
         """
+        kwargs = {}
+
         value = Null
         dtype = defs.get('dtype')
 
-        if dtype == 'list':
+        # Check if this key has multiple subtypes to it
+        if (subtypes := defs.get('subtypes')):
+            # Which subtype to be the default value
+            default = defs.get('defaultType', 0)
+
+            # Skip these keys
+            keys = set(defs) - {'subtypes',}
+
+            # Update subtypes with keys from the parent defs if the key is not defined by the subtype
+            for i, sub in enumerate(subtypes):
+                for k in keys:
+                    if k not in sub:
+                        sub[k] = defs[k]
+
+            # Retrieve the default defs for this key
+            defs = subtypes[default]
+
+            kwargs['subtypes'] = subtypes
+
+        elif dtype == 'list':
             self.__dict__['_type'] = 'List'
             copies  = range(defs.get('repeat', 0))
             subdefs = defs.get('items', defs)
@@ -502,11 +532,13 @@ class Sect:
         elif dtype == 'dict':
             copies = defs.get('repeat', [])
             value  = {key: {} for key in copies}
+
+        # Any child starting with . implies this is a dict type
         elif any(key.startswith('.') for key in defs):
             value = {}
 
         self._log(1, '_setdefs', f'[{key!r}] = {value!r}, defs={defs}')
-        self._setdata(key, value, defs=defs, missing=True)
+        self._setdata(key, value, defs=defs, missing=True, **kwargs)
 
     def _update(self, key, parent=Null):
         """
@@ -736,7 +768,7 @@ class Sect:
             else:
                 self._log('e', 'resetVars', f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
 
-    def dumpYaml(self, key=Null, string=True, truncate=None):
+    def dumpYaml(self, key=Null, string=True, truncate=None, example=False):
         """
         Dumps this object as a YAML string.
 
@@ -751,6 +783,8 @@ class Sect:
         truncate: int, default=None
             `truncate` argument of mlky.utils.printTable; only relevant if
             `string=True`
+        example: bool, default=False
+            Uses example values
 
         Notes
         -----
@@ -798,7 +832,7 @@ class Sect:
         # Dump all child objects to yaml
         lines = []
         for name, child in self.items(var=True):
-            lines += child.dumpYaml(name, string=False)
+            lines += child.dumpYaml(name, string=False, example=example)
 
         # Apply offset
         if lines:
