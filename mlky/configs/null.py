@@ -3,8 +3,35 @@ The Null class of mlky.
 """
 import logging
 
+from datetime import datetime as dtt
+
 
 Logger = logging.getLogger(__file__)
+
+
+def NullErrors(msg, warn):
+    """
+    Attempt to track how many errors are occurring on Null objects. If the errors
+    amount to more than 1k within seconds, raise an exception to prevent an endless
+    loop.
+    """
+    now = dtt.now()
+
+    if (now - NullErrors.now).seconds < 1:
+        NullErrors.err += 1
+    else:
+        NullErrors.err = 0
+
+        if warn:
+            Logger.warning(msg)
+
+    NullErrors.now = now
+
+    if NullErrors.err >= 1000:
+        raise RuntimeError("Endless loop of errors detected (more than 1k errors per second), killing fault tolerance")
+
+NullErrors.now = dtt.now()
+NullErrors.err = 0
 
 
 class NullType(type):
@@ -23,8 +50,8 @@ class NullType(type):
     _warn = True
 
     def __call__(cls, *args, **kwargs):
-        if cls._warn:
-            Logger.warning(f'Null received a call like a function, was this intended?')
+        NullErrors('Null received a call like a function, was this intended?', cls._warn)
+
         return cls
 
     def __deepcopy__(self, memo):
@@ -45,11 +72,15 @@ class NullType(type):
     def __eq__(cls, other):
         return type(other) in [type(None), type(cls)]
 
+    def __iter__(cls):
+        return iter({})
+
     def __setattr__(cls, key, value):
-        if key == '_warn':
+        if key in ('_warn', '_raise'):
             super().__setattr__(key, value)
-        elif cls._warn:
-            Logger.warning(f'Null objects cannot take attribute assignments but will not raise an exception')
+            return
+
+        NullErrors('Null objects cannot take attribute assignments but will not raise an exception', cls._warn)
 
     def __getattr__(cls, key):
         return cls
