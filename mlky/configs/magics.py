@@ -134,7 +134,8 @@ def replace(value, instance=None, dtype=None, callResets=False, _debug=_debug):
             else:
                 _debug(0, 'replace', f'Replacement matched to string but no valid starter token provided: {match!r}')
 
-            value = value.replace('${'+ match +'}', str(data))
+            if data is not Null:
+                value = value.replace('${'+ match +'}', str(data))
 
     if dtype:
         if isinstance(dtype, list):
