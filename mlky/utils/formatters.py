@@ -46,9 +46,12 @@ def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', trunca
     left  = []
     right = []
     for item in iterable:
+        left.append(str(item[0]))
+
         if len(item) > 1:
-            left.append(str(item[0]))
             right.append(str(item[1]))
+        else:
+            right.append(None)
 
     if not left:
         return []
@@ -61,16 +64,15 @@ def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', trunca
         formatter += '{i:' + f'{len(str(len(iterable)))}' + '}: '
     formatter += '{left:'+ str(padding) + '}' + delimiter + ' {right}'
 
-    i = 0
     formatted = []
-    for item in iterable:
+    for i, item in enumerate(iterable):
         if len(item) > 1:
             string = formatter.format(i=i, left=left[i], right=right[i])
             if len(item) > 2:
                 formatted.append((string, *item[2:]))
             else:
                 formatted.append((string, ))
-            i += 1
+
         else:
             formatted.append(item)
 

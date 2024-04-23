@@ -1,6 +1,8 @@
 """
 Tests the mlky Null class
 """
+from time import sleep
+
 from mlky import (
     Null,
     NullDict
@@ -35,6 +37,9 @@ def test_warnings(caplog):
     """
     Verifies warnings can be disabled
     """
+    # Make sure a second has passed so the NullErrors works correctly
+    sleep(1)
+
     # Make sure the previously captured log messages are cleared out
     caplog.clear()
 
@@ -69,3 +74,11 @@ def test_NullDict():
     assert n.b    == 2
     assert n['b'] == 2
     assert n.a    == Null
+
+
+def test_iter():
+    """
+    """
+    # Make sure __iter__ doesn't work
+    for i in Null:
+        assert False, '__iter__ should not have been entered'

@@ -146,7 +146,7 @@ class Sect:
         Enables patching via call, Sect(other)
         """
         if isinstance(other, (type(self), dict)):
-            return self._patch(other, inplace=inplace)
+            return self.applyPatch(other, inplace=inplace)
         raise TypeError(f'mlky.Sect can only be patched using other dicts or Sects')
 
     def __eq__(self, other):
@@ -172,7 +172,7 @@ class Sect:
         check if isinstance of itself and Sect
         """
         if isinstance(other, (type(self), Sect, dict)):
-            return self._patch(other, inplace=False)
+            return self.applyPatch(other, inplace=False)
         raise TypeError(f'mlky.Sect can only use operator | (or) with other dicts or Sects')
 
     def __lt__(self, other):
@@ -185,7 +185,7 @@ class Sect:
         check if isinstance of itself and Sect
         """
         if isinstance(other, (type(self), Sect, dict)):
-            return self._patch(other, inplace=False)
+            return self.applyPatch(other, inplace=False)
         raise TypeError(f'mlky.Sect can only use operator < (lt) with other dicts or Sects')
 
     def __setattr__(self, key, value):
@@ -341,13 +341,13 @@ class Sect:
         elif level in self._dbug or func in self._dbug:
             Logger.debug(message)
 
-    def _patch(self, other, inplace=True):
+    def applyPatch(self, other, inplace=True):
         """
         Patches this Sect using another Sect or dict
         """
         if not inplace:
             self = self.deepCopy()
-            self._log(1, '_patch', 'Patching on deep copy')
+            self._log(0, 'applyPatch', 'Patching on deep copy')
 
         # Auto cast to Sect so merges are easier
         for key, item in Sect(other).items(var=True):
@@ -357,21 +357,26 @@ class Sect:
             if isinstance(item, Sect):
                 # Patch two Sects together
                 if isinstance(data, Sect):
-                    self._log(1, '_patch', f'Patching sub Sect [{key!r}] = {data} | {item}')
+                    self._log(0, 'applyPatch', f'Patching sub Sect [{key!r}] = {data} | {item}')
                     self[key] = data | item
                 # Replace with the other Sect
                 else:
-                    self._log(1, '_patch', f'Adding sub Sect [{key!r}] = {item}')
+                    self._log(0, 'applyPatch', f'Adding sub Sect [{key!r}] = {item}')
                     self[key] = item
             else:
                 # Log whether this is replacing or adding a Var, or if something borked
                 if isinstance(item, Var):
                     if isinstance(data, Var):
-                        self._log(1, '_patch', f'Replacing Var [{key!r}] = {item!r}')
+                        # Defs already defined and the patch doesn't, keep the already existing Var
+                        if not item.defs and data.defs:
+                            item = item.getValue()
+                            self._log(0, 'applyPatch', f'Updating Var [{key!r}] = {item!r}')
+                        else:
+                            self._log(0, 'applyPatch', f'Replacing Var [{key!r}] = {item!r}')
                     else:
-                        self._log(1, '_patch', f'Adding Var [{key!r}] = {item!r}')
+                        self._log(0, 'applyPatch', f'Adding Var [{key!r}] = {item!r}')
                 else:
-                    self._log('e', '_patch', f'A value other than a Sect or Var was found and should not have been: {type(item)} = {item!r}')
+                    self._log('e', 'applyPatch', f'A value other than a Sect or Var was found and should not have been: {type(item)} = {item!r}')
 
                 self[key] = item
 
@@ -409,6 +414,15 @@ class Sect:
         self._log(2, '_setdata', f'Retrieving if this key [{key!r}] already exists')
         data = self._sect[key]
 
+        # Retrieve the defs for this key if this parent has it and wasn't provided
+        if not defs:
+            if 'items' in self._defs:
+                defs = self._defs['items']
+            else:
+                defs = self._defs.get(f'.{key}')
+
+            self._log(2, '_setdata', f'Retrieving defs for key [{key!r}]: {defs}')
+
         # Var is the last resort type
         setVar = False
 
@@ -437,6 +451,12 @@ class Sect:
         elif isinstance(value, dict):
             self._log(2, '_setdata', f'Setting new Sect [{key!r}] = Sect({value}, defs={defs})')
             self._sect[key] = Sect(**args, **kwargs)
+
+        # Check if this is a Var and has multiple types
+        elif isinstance(data, Var) and (sub := data.getSubType(value)):
+            self._log(2, '_setdata', f"Updating existing Var [{key!r}] to subtype {sub['dtype']}")
+            data.applyDefinition(sub)
+            data.value = value
 
         # List types may be Sects, depends on options set
         elif isinstance(value, (list, tuple)):
@@ -483,30 +503,63 @@ class Sect:
             self._log(2, '_setdata', f'[{key!r}] Applying defs: {defs}')
             self._sect[key].applyDefinition(defs)
 
+        # Return the object for further operations
+        return self._sect[key]
+
     def _setdefs(self, key, defs):
         """
         Sets keys from a definitions dictionary
         """
+        kwargs = {}
+
         value = Null
         dtype = defs.get('dtype')
 
-        if dtype == 'list':
+        # Check if this key has multiple subtypes to it
+        if (subtypes := defs.get('subtypes')):
+            # Which subtype to be the default value
+            default = defs.get('defaultType', 0)
+
+            # Skip these keys
+            keys = set(defs) - {'subtypes',}
+
+            # Update subtypes with keys from the parent defs if the key is not defined by the subtype
+            for i, sub in enumerate(subtypes):
+                for k in keys:
+                    if k not in sub:
+                        sub[k] = defs[k]
+
+            # Retrieve the default defs for this key
+            defs = subtypes[default]
+
+            kwargs['subtypes'] = subtypes
+
+        elif dtype == 'list':
             self.__dict__['_type'] = 'List'
             copies  = range(defs.get('repeat', 0))
             subdefs = defs.get('items', defs)
             subval  = Null
-            if any(key.startswith('.') for key in subdefs):
-                subval = {}
-            value = [subval for _ in copies]
+            if 'subtypes' in subdefs:
+                value = [
+                    {item.get('key'): item.get('value')}
+                    for item in subdefs.get('subtypes', [])
+                ]
+            else:
+                if any(key.startswith('.') for key in subdefs):
+                    subval = {}
+
+                value = [subval for _ in copies]
 
         elif dtype == 'dict':
             copies = defs.get('repeat', [])
             value  = {key: {} for key in copies}
+
+        # Any child starting with . implies this is a dict type
         elif any(key.startswith('.') for key in defs):
             value = {}
 
         self._log(1, '_setdefs', f'[{key!r}] = {value!r}, defs={defs}')
-        self._setdata(key, value, defs=defs, missing=True)
+        self._setdata(key, value, defs=defs, missing=True, **kwargs)
 
     def _update(self, key, parent=Null):
         """
@@ -551,10 +604,26 @@ class Sect:
                 else:
                     self._log(0, 'applyDefinition', f'Applying defs to key {key!r}')
                     self.get(key, var=True).applyDefinition(val)
+
+            # List type
             elif key == 'items':
                 for name, child in self.items(var=True):
                     self._log(0, 'applyDefinition', f'Applying defs to child {key!r}')
                     child.applyDefinition(val)
+
+            # Sublist type
+            elif key == 'subtypes':
+                for item in val:
+                    key   = item.get('key')
+                    value = item.get('value')
+
+                    if key is None:
+                        raise AttributeError(f'A `key` field needs to be set for item subtypes in the defs: {defs}')
+                    if value is None:
+                        raise AttributeError(f'A `value` field needs to be set for item subtypes in the defs: {defs}')
+
+                    if self[key] == value:
+                        self.applyDefinition(item)
 
     def deepUpdate(self):
         """
@@ -736,7 +805,7 @@ class Sect:
             else:
                 self._log('e', 'resetVars', f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
 
-    def dumpYaml(self, key=Null, string=True, truncate=None):
+    def dumpYaml(self, key=Null, string=True, truncate=None, nulls=True, comments='inline', space=False):
         """
         Dumps this object as a YAML string.
 
@@ -751,6 +820,15 @@ class Sect:
         truncate: int, default=None
             `truncate` argument of mlky.utils.printTable; only relevant if
             `string=True`
+        nulls: bool, default=True
+            Include Vars that return Null. Set False to exclude these
+        comments: str, default='inline'
+            Comment styling:
+                - inline = key: value # comment
+                - above  = Comment line above the key: value (Not Implemented)
+                - None   = Comments removed
+        space: bool, default=False
+            Adds a blank line space between lines
 
         Notes
         -----
@@ -786,19 +864,26 @@ class Sect:
 
         if key is None:
             key = self._f.name
+
         if key is Null:
-            line = [['generated:', 'K', 'dtype', 'Short description']]
+            # Root level section
+            line, flag, dtype, sdesc = 'generated:', 'K', 'dtype', 'Short description'
         else:
             if key == '':
                 line = ''
             else:
                 line = f'{key}:'
-            line = [[line, flag, dtype, sdesc]]
+
+                # If this Sect doesn't have children just set the value to {}
+                if not any(self):
+                    line = f'{key}:' + ' {}'
+
+        line = [[line, flag, dtype, sdesc]]
 
         # Dump all child objects to yaml
         lines = []
         for name, child in self.items(var=True):
-            lines += child.dumpYaml(name, string=False)
+            lines += child.dumpYaml(name, string=False, nulls=nulls)
 
         # Apply offset
         if lines:
@@ -806,6 +891,34 @@ class Sect:
                 lines[i][0] = '  ' + child[0]
 
         dump = line + lines
+
+
+        if comments == 'above':
+            # # flag | dtype | sdesc
+            # key: value
+
+            hold = []
+            for line in dump:
+                offset = ' ' * (len(line[0]) - len(line[0].lstrip()))
+
+                if space:
+                    offset = f'\n{offset}'
+
+                hold.append([offset + '# ' + ' | '.join(line[1:])])
+                hold.append([line[0]])
+
+            dump = hold
+
+        else:
+            if comments == 'inline':
+                pass # Dump list is already formatted properly to this style
+            elif comments is None:
+                dump = [[line[0]] for line in dump]
+
+            if space:
+                for line in dump:
+                    line[0] = '\n' + line[0]
+
         if string:
             return '\n'.join(
                 printTable(dump, columns = {

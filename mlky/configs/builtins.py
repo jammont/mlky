@@ -29,7 +29,7 @@ def get_env(key, other=''):
 
     Returns
     -------
-    str, any
+    str | any
         If the key exists the return will be a str, otherwise return the `other`
         parameter
     """
@@ -100,7 +100,7 @@ def oneof(var, *opts, options=[], regex=False):
 
     Returns
     -------
-    True, str
+    True | str
         Returns True if `value` is oneof `options`, otherwise return an error
         message as a string
     """
@@ -152,7 +152,7 @@ def isdir(var):
 
     Returns
     -------
-    bool or str
+    bool | str
         Returns True if the path exists, otherwise returns an error string
     """
     path = var.getValue()
@@ -176,7 +176,7 @@ def isfile(var):
 
     Returns
     -------
-    bool or str
+    bool | str
         Returns True if the path exists, otherwise returns an error string
     """
     path = var.getValue()
@@ -227,7 +227,7 @@ def between(var, a, b, inclusive=False):
         The upper bound comparison
     b: any
         The lower bound comparison
-    inclusive: bool or str, defaults=False
+    inclusive: bool | str, defaults=False
         Boundary inclusivity:
         - False   = Both bounds are exclusive
         - 'lower' = The lower bound is inclusive, upper is not
@@ -237,7 +237,7 @@ def between(var, a, b, inclusive=False):
 
     Returns
     -------
-    list or True
+    list | True
         Returns compare(value) with the correct bounds. If `value` is
         within specified bounds, return True, else return a list of strings
         which are the error message(s).
@@ -260,6 +260,20 @@ def between(var, a, b, inclusive=False):
 def one_valid(items):
     """
     Checks that one of the keys passes .validate()
+
+    Parameters
+    ----------
+    items: list of Var
+        Var objects to validate on
+
+    Returns
+    -------
+    True | str
+        Returns True if one item is valid, otherwise returns an error string
+
+    Notes
+    -----
+    This is a Sect check function, not be used for Vars
     """
     ov = False # One Valid
     for item in items:
@@ -284,6 +298,20 @@ def one_valid(items):
 def mutually_exclusive(items):
     """
     Checks that only one key is defined
+
+    Parameters
+    ----------
+    items: list of Var
+        Var objects to validate on
+
+    Returns
+    -------
+    True | str
+        Returns True if one item is valid, otherwise returns an error string
+
+    Notes
+    -----
+    This is a Sect check function, not be used for Vars
     """
     defined = []
     for item in items:
@@ -292,6 +320,39 @@ def mutually_exclusive(items):
 
     if len(defined) > 1:
         return f'The following keys are mutually exclusive, please only set one: {defined}'
+    return True
+
+
+@register
+def if_one_then_all(items):
+    """
+    If one item is defined then all must be defined
+
+    Parameters
+    ----------
+    items: list of Var
+        Var objects to validate on
+
+    Returns
+    -------
+    True | str
+        Returns True if one item is valid, otherwise returns an error string
+
+    Notes
+    -----
+    This is a Sect check function, not be used for Vars
+    """
+    defined   = []
+    undefined = []
+    for item in items:
+        name = item._f.name
+        if item._f.value is not Null:
+            defined.append(name)
+        else:
+            undefined.append(name)
+
+    if defined and undefined:
+        return f'If one is defined, all must be defined: defined={defined}, undefined={undefined}'
     return True
 
 
@@ -315,7 +376,7 @@ def check_dtype(value, dtype):
 
     Returns
     -------
-    True or str or list of str
+    True | str | list of str
         Returns True if this value is the expected type. If it is not, returns
         either a string or list of strings describing the error.
     """
@@ -323,8 +384,8 @@ def check_dtype(value, dtype):
         return True
 
     if isinstance(dtype, list):
-        if True not in [check_type(value, t) for t in dtype]:
-            return f'Value type <{dtype!r}> is not one of {dtype}'
+        if True not in [check_dtype(value, t) for t in dtype]:
+            return f'Value {value!r} (type: {type(value)}) is not one of types {dtype}'
         return True
 
     # Use a custom function to check the type
