@@ -323,6 +323,39 @@ def mutually_exclusive(items):
     return True
 
 
+@register
+def if_one_then_all(items):
+    """
+    If one item is defined then all must be defined
+
+    Parameters
+    ----------
+    items: list of Var
+        Var objects to validate on
+
+    Returns
+    -------
+    True | str
+        Returns True if one item is valid, otherwise returns an error string
+
+    Notes
+    -----
+    This is a Sect check function, not be used for Vars
+    """
+    defined   = []
+    undefined = []
+    for item in items:
+        name = item._f.name
+        if item._f.value is not Null:
+            defined.append(name)
+        else:
+            undefined.append(name)
+
+    if defined and undefined:
+        return f'If one is defined, all must be defined: defined={defined}, undefined={undefined}'
+    return True
+
+
 # dtypes assigned to these values always pass checks
 Typeless = (Null, 'Null', None, 'None', 'any')
 
