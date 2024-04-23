@@ -22,12 +22,11 @@ Logger = logging.getLogger(__file__)
 
 
 class Config(Sect):
-    def __init__(self, data={}, patch=[], defs={}, debug=-1, validate=True, _raise=True, **kwargs):
+    def __init__(self, data={}, patch=[], defs={}, debug=-1, validate=True, **kwargs):
         """
         """
         # Config-specific private variables
         self.__dict__['_patch'] = patch = self.parsePatch(patch)
-        self.__dict__['_raise'] = _raise
 
         # If patching, don't apply defs with creation
         if patch:
