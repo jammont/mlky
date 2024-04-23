@@ -46,12 +46,12 @@ def printTable(iterable, enum=False, delimiter='=', offset=1, prepend='', trunca
     left  = []
     right = []
     for item in iterable:
+        left.append(str(item[0]))
         if len(item) > 1:
-            left.append(str(item[0]))
             right.append(str(item[1]))
 
-    if not left:
-        return []
+    if not right:
+        return left
     elif isinstance(truncate, int):
         left = [item[:truncate] for item in left]
 
