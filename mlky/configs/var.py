@@ -42,6 +42,7 @@ def getType(dtype):
 
 class Var:
     value    = Null
+    defs     = Null
     debug    = set()
     missing  = True
     required = False
@@ -116,7 +117,8 @@ class Var:
             self.value = value
         else:
             # No replace(), takes as-is
-            super().__setattr__('value', value)
+            # super().__setattr__('value', value)
+            self.setValue(value, replace=False, validate=False)
 
     def __eq__(self, other):
         data = self.toDict()
@@ -161,23 +163,25 @@ class Var:
                 self._debug(2, 'deepReplace', f'Calling deepReplace on child list {item}')
                 self.deepReplace(item)
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key, value, replace=True, validate=True):
         """
         """
         if key == 'value':
             # Reset this if it was set elsewhere when the Var.value is changed
             self._skip_checks = False
 
-            # Lists to Sects disabled, perform a deep replacement
-            if isinstance(value, (list, tuple)):
-                self.original = copy.deepcopy(value)
-                self.deepReplace(value)
-            else:
-                # Always call to see if this value should be replaced
-                new = self.replace(value)
-                if new is not None:
-                    self.original = value
-                    value = new
+            # Call replace if enabled
+            if replace:
+                # Lists to Sects disabled, perform a deep replacement
+                if isinstance(value, (list, tuple)):
+                    self.original = copy.deepcopy(value)
+                    self.deepReplace(value)
+                else:
+                    # Always call to see if this value should be replaced
+                    new = self.replace(value)
+                    if new is not None:
+                        self.original = value
+                        value = new
 
             # Replacement may cause a value to become Null, this is always considered "missing"
             if value is Null:
@@ -185,10 +189,12 @@ class Var:
             else:
                 self.missing = False
 
-            # Non-empty dict means errors found
-            errs = self.validate(value).reduce()
-            if errs:
-                Logger.error(f'Changing the value of this Var({self.name}) to will cause validation to fail. See var.validate() for errors')
+            # Call validation checks if enabled
+            if validate:
+                # Non-empty dict means errors found
+                errs = self.validate(value).reduce()
+                if errs:
+                    Logger.error(f'Changing the value of this Var({self.name}) to will cause validation to fail. See var.validate() for errors')
 
         elif key == 'dtype':
             value = getType(value)
@@ -368,7 +374,7 @@ class Var:
         if isinstance(value, list):
             for item in value:
                 if hasattr(item, 'validate'):
-                    errors[item._f.name] = item.validate()
+                    errors[item._f.name] = item.validate(asbool=False, report=False)
 
         # Reset at the end
         self._tmp_value = Null
@@ -384,9 +390,18 @@ class Var:
         """
         value = self.getValue()
 
-        if value is not self.original:
+        if isinstance(value, list):
+            for item in value:
+                # Sect type
+                if hasattr(item, 'resetVars'):
+                    item.resetVars()
+                elif isinstance(item, Var):
+                    item.reset()
+
+        elif value is not self.original:
             self._debug(0, 'reset', f'Resetting from {value} to {self.original}')
             self.value = self.original
+
         elif isinstance(value, str) and value.startswith('$'):
             if not self._disable_reset_magics:
                 self._debug(0, 'reset', f'Current value is a magic, resetting to call replacement')
@@ -398,12 +413,18 @@ class Var:
         """
         value = self.getValue()
         for key, val in defs.items():
+            # This is a list type
             if key == 'items':
+                # For each item in the list
                 for subval in value:
+                    # If it is a Sect or Var, apply def
                     if subval is not Null and hasattr(subval, 'applyDefinition'):
                         name = subval._f.name
                         self._debug(0, 'applyDefinition', f'Applying definitions to child objects: {name}')
                         subval.applyDefinition(val.get(name, val))
+
+                # List may have changed, set as the original
+                self.original = self.getValue()
             else:
                 self._debug(0, 'applyDefinition', f'{key} = {val!r}')
                 setattr(self, key, val)
@@ -411,6 +432,8 @@ class Var:
                 if key == 'default' and self.original is Null:
                     self._debug(0, 'applyDefinition', f'Original is Null and default provided, setting original to default')
                     setattr(self, 'original', val)
+        else:
+            setattr(self, 'defs', defs)
 
     def replace(self, value):
         """
@@ -444,6 +467,13 @@ class Var:
         if replacement is not value:
             self._debug(0, 'replace', f'Replacing {value!r} with {replacement!r}')
             return replacement
+
+    def setValue(self, value, validate=True, replace=True):
+        """
+        Sets the value for the Var. Enables circumventing validate and replace that
+        typically happens in __setattr__.
+        """
+        self.__setattr__('value', value, validate=validate, replace=replace)
 
     def getValue(self, default=True, example=False):
         """
@@ -491,7 +521,7 @@ class Var:
                 return sub
         return False
 
-    def dumpYaml(self, key=None, example=False, **kwargs):
+    def dumpYaml(self, key=None, example=False, nulls=True, **kwargs):
         """
         Serialize the object to YAML format.
 
@@ -533,8 +563,17 @@ class Var:
 
         value = self.getValue(example=example)
 
+        # If this is a Null or a list of Nulls and nulls is turned off, return nothing
+        if not nulls:
+            if isinstance(value, list):
+                if all([v is Null for v in value]):
+                    return []
+            elif value is Null:
+                return []
+
         lines = []
         if example:
+            # TODO: Finish implementation
             # Multiple examples
             if isinstance(value, list):
                 for val in value:
@@ -542,7 +581,6 @@ class Var:
                         ...
             else:
                 line = yaml.dump({key: value})[:-1]
-
 
         elif isinstance(value, list):
             line = f'{key}:'
@@ -552,7 +590,7 @@ class Var:
                         # Replace Null values with backslash
                         lines.append(['- \\'])
                     elif hasattr(val, 'dumpYaml'):
-                        dump = val.dumpYaml('', string=False)
+                        dump = val.dumpYaml('', string=False, nulls=nulls)
                         dump[0][0] = '- ' + dump[0][0]
                         lines += dump
                     else:
