@@ -49,7 +49,7 @@ class Config(Sect):
         funcs.getRegister('config.addChecks')()
 
         # Reset all Vars to refresh any magic changes that need to happen
-        self.resetVars()
+        self.replaceVars()
 
     def __call__(self, data=None, patch=[], defs={}, *, local=False, **kwargs):
         """

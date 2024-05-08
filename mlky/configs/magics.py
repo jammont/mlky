@@ -111,8 +111,8 @@ def replace(value, instance=None, dtype=None, callResets=False, _debug=_debug):
 
                 if isinstance(data, Var):
                     if callResets:
-                        _debug(0, 'replace', f'Calling reset from magics.replace on {data.name}')
-                        data.reset()
+                        _debug(0, 'replace', f'Calling Var.replace from magics.replace on {data.name}')
+                        data.switchReplace()
 
                     data = data.getValue()
 
@@ -138,16 +138,50 @@ def replace(value, instance=None, dtype=None, callResets=False, _debug=_debug):
                 value = value.replace('${'+ match +'}', str(data))
 
     if dtype:
-        if isinstance(dtype, list):
-            _debug(0, 'replace', f'Cannot cast replacement value {value!r} as the dtype is a list and cannot be assumed: {dtype=}')
-        elif dtype in (list, tuple):
-            # Logger.debug(f'List dtype casting is not supported')
-            pass
-        else:
-            try:
-                value = dtype(value)
-            except:
-                _debug('e', 'replace', f'Failed to cast replacement value {value!r} to {dtype=}')
+        return cast(value, dtype, _debug)
+
+    return value
+
+
+@register(name='config.cast')
+def cast(value, dtype, _debug=_debug):
+    """
+    Attempts to cast a value to a given dtype
+
+    Parameters
+    ----------
+    value: any
+        Value to cast
+    dtype: type
+        Type to cast with
+    _debug: function
+        Sect or Var ._debug() function for debug logging
+
+    Returns
+    -------
+    value: any
+        Casted value if possible, otherwise the original value
+    """
+    if isinstance(dtype, list):
+        _debug(0, 'replace', f'Cannot cast replacement value {value!r} as the dtype is a list and cannot be assumed: {dtype=}')
+
+    elif dtype in (list, tuple):
+        # Logger.debug(f'List dtype casting is not supported')
+        pass
+
+    # Skip casting on these dtypes
+    elif dtype in ('any', 'None', None, 'Null', Null):
+        pass
+
+    # Skip casting on these values
+    elif value in (Null, None):
+        pass
+
+    else:
+        try:
+            value = dtype(value)
+        except:
+            _debug('e', 'replace', f'Failed to cast replacement value {value!r} to {dtype=}')
 
     return value
 

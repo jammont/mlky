@@ -608,7 +608,7 @@ class Sect:
             # List type
             elif key == 'items':
                 for name, child in self.items(var=True):
-                    self._log(0, 'applyDefinition', f'Applying defs to child {key!r}')
+                    self._log(0, 'applyDefinition', f'Applying items defs to child {name!r}')
                     child.applyDefinition(val)
 
             # Sublist type
@@ -624,6 +624,18 @@ class Sect:
 
                     if self[key] == value:
                         self.applyDefinition(item)
+
+            # Key is name of Sect to apply to
+            else:
+                # * applies to all keys
+                if key == '*':
+                    self._log(0, 'applyDefinition', f'Applying * defs')
+                    self.applyDefinition(val)
+
+                name = self._name.split('.')[-1]
+                if name == key:
+                    self._log(0, 'applyDefinition', f'Applying items[{key}] defs')
+                    self.applyDefinition(val)
 
     def deepUpdate(self):
         """
@@ -805,7 +817,19 @@ class Sect:
             else:
                 self._log('e', 'resetVars', f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
 
-    def dumpYaml(self, key=Null, string=True, truncate=None, nulls=True, comments='inline', space=False):
+    def replaceVars(self):
+        """
+        Runs replace on each Var
+        """
+        for key, item in self._sect.items():
+            if isinstance(item, Sect):
+                item.replaceVars()
+            elif isinstance(item, Var):
+                item.switchReplace()
+            else:
+                self._log('e', 'replaceVars', f'Internal _sect has a value other than a Var or Sect: {key!r} = {item!r}')
+
+    def dumpYaml(self, key=Null, string=True, truncate=None, comments='inline', space=False, **kwargs):
         """
         Dumps this object as a YAML string.
 
@@ -820,8 +844,6 @@ class Sect:
         truncate: int, default=None
             `truncate` argument of mlky.utils.printTable; only relevant if
             `string=True`
-        nulls: bool, default=True
-            Include Vars that return Null. Set False to exclude these
         comments: str, default='inline'
             Comment styling:
                 - inline = key: value # comment
@@ -829,6 +851,12 @@ class Sect:
                 - None   = Comments removed
         space: bool, default=False
             Adds a blank line space between lines
+        **kwargs: dict
+            Additional arguments passed to Var.dumpYaml:
+                cast: bool, default=False
+                    Attempts to cast the stored value to the expected dtype, if available
+                nulls: bool, default=True
+                    Include Vars that return Null. Set False to exclude these
 
         Notes
         -----
@@ -883,7 +911,7 @@ class Sect:
         # Dump all child objects to yaml
         lines = []
         for name, child in self.items(var=True):
-            lines += child.dumpYaml(name, string=False, nulls=nulls)
+            lines += child.dumpYaml(name, string=False, **kwargs)
 
         # Apply offset
         if lines:
@@ -891,7 +919,6 @@ class Sect:
                 lines[i][0] = '  ' + child[0]
 
         dump = line + lines
-
 
         if comments == 'above':
             # # flag | dtype | sdesc
@@ -931,11 +958,11 @@ class Sect:
             )
         return dump
 
-    def generateTemplate(self, file=None):
+    def generateTemplate(self, file=None, **kwargs):
         """
         Generates a YAML template file
         """
-        dump = yamlHeader + self.dumpYaml(string=True)
+        dump = yamlHeader + self.dumpYaml(string=True, **kwargs)
 
         if file:
             with open(file, 'w') as f:

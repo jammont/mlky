@@ -144,14 +144,46 @@ class Var:
             self.missing, self.checks
         ))
 
+    def switchReplace(self):
+        """
+        Switches between self.deepReplace or self.replace, depending on which is more
+        appropriate for this Var
+        """
+        value = self.getValue()
+
+        if 'Sect' in str(type(value)):
+            self._debug(2, 'switchReplace', 'Calling deepReplace for Sect type')
+            self.deepReplace(value)
+        elif isinstance(value, (list, tuple)):
+            self._debug(2, 'switchReplace', 'Calling deepReplace for list type')
+            self.deepReplace(value)
+        else:
+            self._debug(2, 'switchReplace', 'Calling replace')
+            self.replace(inline=True)
+
     def deepReplace(self, value):
         """
         Calls reset on the children of this Var's value if it is a list type
         """
+        # if value is Null:
+        #     value = self.getValue()
+        #
+        # if isinstance(value, Var):
+        #     self._debug(2, 'deepReplace', f'Calling replace on Var {item}')
+        #     value.replace(**kwargs)
+        # elif 'Sect' in str(type(value)):
+        #     pass
+        # elif isinstance(value, (list, tuple)):
+        #     pass
+        # else:
+        #     if isinstance(value, str):
+        #         self.replace(**kwargs)
+        #     return
+
         for i, item in enumerate(value):
             if 'Sect' in str(type(item)):
-                self._debug(2, 'deepReplace', f'Resetting {item}')
-                item.resetVars()
+                self._debug(2, 'deepReplace', f'Calling [{i}].replaceVars on {item}')
+                item.replaceVars()
 
             elif isinstance(item, str):
                 new = self.replace(item)
@@ -426,7 +458,7 @@ class Var:
                 # List may have changed, set as the original
                 self.original = self.getValue()
             else:
-                self._debug(0, 'applyDefinition', f'{key} = {val!r}')
+                self._debug(0, 'applyDefinition', f'Setting {key} = {val!r}')
                 setattr(self, key, val)
 
                 if key == 'default' and self.original is Null:
@@ -435,12 +467,22 @@ class Var:
         else:
             setattr(self, 'defs', defs)
 
-    def replace(self, value):
+    def replace(self, value=Null, inline=False, replace_only_if_magic=None, replace_slash_null=None):
         """
         mlky replacement magic to support independent Sect instances
 
         Work in progress
         """
+        if value is Null:
+            value = self.getValue()
+
+        # Allow override
+        if isinstance(replace_only_if_magic, bool):
+            self._replace_only_if_magic = replace_only_if_magic
+
+        if isinstance(replace_slash_null, bool):
+            self._replace_slash_null = replace_slash_null
+
         if isinstance(value, str):
             # Allow "\" values to be passed through to the replace function which will be replaced with Null
             if self._replace_slash_null and value == '\\':
@@ -465,8 +507,12 @@ class Var:
 
         replacement = funcs.getRegister('config.replace')(value, parent, dtype=self.dtype, callResets=self._replace_recursively, _debug=self._debug)
         if replacement is not value:
-            self._debug(0, 'replace', f'Replacing {value!r} with {replacement!r}')
-            return replacement
+            self._debug(0, 'replace', f'Replaced {value!r} with {replacement!r}')
+
+            if inline:
+                self.setValue(replacement, replace=False, validate=False)
+            else:
+                return replacement
 
     def setValue(self, value, validate=True, replace=True):
         """
@@ -521,7 +567,7 @@ class Var:
                 return sub
         return False
 
-    def dumpYaml(self, key=None, example=False, nulls=True, **kwargs):
+    def dumpYaml(self, key=None, example=False, nulls=True, cast=False, **kwargs):
         """
         Serialize the object to YAML format.
 
@@ -530,7 +576,11 @@ class Var:
         key: str or None, optional
             The key to use in the YAML output. If None, the name of the object will be used as the key.
         example: bool, default=False
-            Use example values instead of actual or default values
+            Use example values instead of actual or default values [WIP]
+        nulls: bool, default=True
+            Include Vars that are Null values. If False, removes them from the return
+        cast: bool, default=False
+            Attempts to cast the stored value to the expected dtype, if available
         **kwargs: dict
             Ignore other kwargs that may be passed by a Sect parent but are unused by Var objects
 
@@ -590,16 +640,23 @@ class Var:
                         # Replace Null values with backslash
                         lines.append(['- \\'])
                     elif hasattr(val, 'dumpYaml'):
-                        dump = val.dumpYaml('', string=False, nulls=nulls)
+                        dump = val.dumpYaml('', string=False, nulls=nulls, cast=cast)
                         dump[0][0] = '- ' + dump[0][0]
                         lines += dump
                     else:
+                        if cast:
+                            val = funcs.getRegister('config.cast')(val, dtype=self.dtype, _debug=self._debug)
+
                         lines.append(['- ' + yaml.dump(val).split('\n')[0]])
             else:
                 line = f'{key}: []'
         else:
+            if cast:
+                value = funcs.getRegister('config.cast')(value, dtype=self.dtype, _debug=self._debug)
+
             if value is Null:
                 value = '\\'
+
             line = yaml.dump({key: value})[:-1]
 
         # Apply spacing offset
