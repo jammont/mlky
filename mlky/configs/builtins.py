@@ -323,7 +323,7 @@ def mutually_exclusive(items):
     return True
 
 
-@register
+@register()
 def if_one_then_all(items):
     """
     If one item is defined then all must be defined
