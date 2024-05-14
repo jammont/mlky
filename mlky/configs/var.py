@@ -72,7 +72,6 @@ class Var:
     def __init__(self, name, key,
         value    = Null,
         default  = Null,
-        example  = Null,
         dtype    = Null,
         subtypes = Null,
         required = False,
@@ -102,7 +101,6 @@ class Var:
         self.name     = name
         self.key      = key
         self.default  = default
-        self.example  = example
         self.dtype    = dtype
         self.subtypes = subtypes
         self.required = required
@@ -524,7 +522,7 @@ class Var:
         """
         self.__setattr__('value', value, validate=validate, replace=replace)
 
-    def getValue(self, default=True, example=False):
+    def getValue(self, default=True):
         """
         Returns this Var's value. If it is Null and default is enabled, returns the
         default value instead.
@@ -534,12 +532,7 @@ class Var:
         default: bool, default=True
             If .value is Null, return .default
             If this is false, always return .value
-        example: bool, default=False
-            Override and return the example value
         """
-        if example:
-            return self.example
-
         # If a user passes in a value to validate(), return that on any call to this function
         # This helps registered functions retrieve a temporary value instead
         if self._tmp_value is not Null:
@@ -570,7 +563,7 @@ class Var:
                 return sub
         return False
 
-    def dumpYaml(self, key=None, default=True, example=False, nulls=True, cast=False, **kwargs):
+    def dumpYaml(self, key=None, defaults=True, nulls=True, cast=False, **kwargs):
         """
         Serialize the object to YAML format.
 
@@ -578,10 +571,8 @@ class Var:
         ----------
         key: str or None, optional
             The key to use in the YAML output. If None, the name of the object will be used as the key.
-        default: bool, default=True
-            Include default values, Set as null otherwise
-        example: bool, default=False
-            Use example values instead of actual or default values [WIP]
+        defaults: bool, default=True
+            Include default values, set as null otherwise
         nulls: bool, default=True
             Include Vars that are Null values. If False, removes them from the return
         cast: bool, default=False
@@ -617,7 +608,7 @@ class Var:
                     break
                 parent = parent._prnt
 
-        value = self.getValue(default=default, example=example)
+        value = self.getValue(default=defaults)
 
         # If this is a Null or a list of Nulls and nulls is turned off, return nothing
         if not nulls:
@@ -628,17 +619,7 @@ class Var:
                 return []
 
         lines = []
-        if example:
-            # TODO: Finish implementation
-            # Multiple examples
-            if isinstance(value, list):
-                for val in value:
-                    if isinstance(val, dict):
-                        ...
-            else:
-                line = yaml.dump({key: value})[:-1]
-
-        elif isinstance(value, list):
+        if isinstance(value, list):
             line = f'{key}:'
             if value:
                 for val in value:

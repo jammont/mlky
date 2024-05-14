@@ -4,7 +4,7 @@ The core of mlky: The Sect class.
 This class acts like a fault-tolerant dict with dot notational syntax.
 """
 import copy
-import json
+import glob
 import logging
 import os
 
@@ -44,12 +44,39 @@ def reportErrors(errors, offset=''):
                 Logger.error(offset + f'- {key}: {errs}')
 
 
+def merge(a, *b):
+    """
+    Merge dict a into b
+    Used to load multiple input files together. Recursively merges multiple dicts if
+    provided
+
+    Parameters
+    ----------
+    a : dict
+        Source dictionary
+    b : tuple[dict] of len => 1
+        Destination dictionaries to merge into
+    """
+    if len(b) > 1:
+        b = (merge(b[0], *b[1:]),)
+    [b] = b
+
+    for key, value in a.items():
+        if isinstance(value, dict):
+            c = b.setdefault(key, {})
+            merge(value, c)
+        else:
+            b[key] = value
+
+    return b
+
+
 class Sect:
     # Default values for when a subclass isn't fully initialized
     _name = ""
     _sect = NullDict()
     _defs = {}
-    _dbug = -1
+    _dbug = {-1,}
     _prnt = Null
     _type = 'Dict'
     _chks = []
@@ -858,6 +885,8 @@ class Sect:
                     This may correct types unknown to YAML from dumping as !!python/types
                 nulls: bool, default=True
                     Include Vars that return Null. Set False to exclude these
+                defaults: bool, default=True
+                    Include default values, set as null otherwise
 
         Notes
         -----
@@ -903,10 +932,6 @@ class Sect:
             else:
                 line = f'{key}:'
 
-                # If this Sect doesn't have children just set the value to {}
-                if not any(self):
-                    line = f'{key}:' + ' {}'
-
         line = [[line, flag, dtype, sdesc]]
 
         # Dump all child objects to yaml
@@ -918,6 +943,13 @@ class Sect:
         if lines:
             for i, child in enumerate(lines):
                 lines[i][0] = '  ' + child[0]
+        else:
+            # If Nulls are disabled, just remove this Sect altogether
+            if kwargs.get('nulls') is False:
+                return []
+            # Update this Sect to just be an empty dict
+            elif key:
+                line[0][0] += " {}"
 
         dump = line + lines
 
@@ -978,6 +1010,7 @@ class Sect:
             - Strings:
                 - yaml formatted
                 - pathlib.Path
+                - Glob string
             - Returns these types as-is:
                 - type(self)
                 - Sect
@@ -996,26 +1029,29 @@ class Sect:
         # Dicts and Sects return as-is
         dtypes = [type(self), Sect, dict, list, tuple]
         if isinstance(data, tuple(dtypes)):
+            self._log(0, 'loadDict', f'Already a supported type, returning: {type(data)}')
             return data
 
         dtypes += ['yaml', 'json', 'pathlib.Path']
         if isinstance(data, (str, Path)):
             # File case
             if os.path.isfile(data):
-                _, ext = os.path.splitext(data)
+                self._log(0, 'loadDict', f'Loading from yaml.loads(file={data})')
+                with open(data, 'r') as file:
+                    data = yaml.load(file, Loader=yaml.FullLoader)
 
-                if ext in ['.yml', '.yaml']:
-                    with open(data, 'r') as file:
-                        data = yaml.load(file, Loader=yaml.FullLoader)
-                elif ext in ['.json']:
-                    return json.loads(data)
-
+            elif glob.has_magic(data):
+                data = [self.loadDict(file) for file in glob.glob(data)]
+                if len(data) > 1:
+                    data = merge(data[0], *data[1:])
+                    self._log(0, 'loadDict', f'Merged files together')
             else:
                 try:
                     # Raw yaml strings supported only
                     data = yaml.load(data, Loader=yaml.FullLoader)
+                    self._log(0, 'loadDict', 'Loaded from yaml.load(string)')
                 except:
-                    raise TypeError('Data input is a string but is not a file nor a yaml string')
+                    raise TypeError(f'Data input is a string but is not a file nor a yaml string: {data}')
 
             return data
 
