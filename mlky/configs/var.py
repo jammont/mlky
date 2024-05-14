@@ -54,6 +54,9 @@ class Var:
     # .reset() will replace magic strings "${...}", this will disable that
     _disable_reset_magics = False
 
+    # disable .replace(inline=True)
+    _disable_replace_inline = False
+
     # Will only call replace on magic strings, not any value
     _replace_only_if_magic = True
 
@@ -159,7 +162,7 @@ class Var:
             self.deepReplace(value)
         else:
             self._debug(2, 'switchReplace', 'Calling replace')
-            self.replace(inline=True)
+            self.replace(inline=not self._disable_replace_inline)
 
     def deepReplace(self, value):
         """
@@ -567,7 +570,7 @@ class Var:
                 return sub
         return False
 
-    def dumpYaml(self, key=None, example=False, nulls=True, cast=False, **kwargs):
+    def dumpYaml(self, key=None, default=True, example=False, nulls=True, cast=False, **kwargs):
         """
         Serialize the object to YAML format.
 
@@ -575,12 +578,15 @@ class Var:
         ----------
         key: str or None, optional
             The key to use in the YAML output. If None, the name of the object will be used as the key.
+        default: bool, default=True
+            Include default values, Set as null otherwise
         example: bool, default=False
             Use example values instead of actual or default values [WIP]
         nulls: bool, default=True
             Include Vars that are Null values. If False, removes them from the return
         cast: bool, default=False
             Attempts to cast the stored value to the expected dtype, if available
+            This may correct types unknown to YAML from dumping as !!python/types
         **kwargs: dict
             Ignore other kwargs that may be passed by a Sect parent but are unused by Var objects
 
@@ -611,7 +617,7 @@ class Var:
                     break
                 parent = parent._prnt
 
-        value = self.getValue(example=example)
+        value = self.getValue(default=default, example=example)
 
         # If this is a Null or a list of Nulls and nulls is turned off, return nothing
         if not nulls:

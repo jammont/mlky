@@ -540,7 +540,7 @@ class Sect:
             subdefs = defs.get('items', defs)
             subval  = Null
             if 'subtypes' in subdefs:
-                value = [
+                subval = [
                     {item.get('key'): item.get('value')}
                     for item in subdefs.get('subtypes', [])
                 ]
@@ -548,7 +548,7 @@ class Sect:
                 if any(key.startswith('.') for key in subdefs):
                     subval = {}
 
-                value = [subval for _ in copies]
+            value = [subval for _ in copies]
 
         elif dtype == 'dict':
             copies = defs.get('repeat', [])
@@ -855,6 +855,7 @@ class Sect:
             Additional arguments passed to Var.dumpYaml:
                 cast: bool, default=False
                     Attempts to cast the stored value to the expected dtype, if available
+                    This may correct types unknown to YAML from dumping as !!python/types
                 nulls: bool, default=True
                     Include Vars that return Null. Set False to exclude these
 
