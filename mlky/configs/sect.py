@@ -221,7 +221,7 @@ class Sect:
     def __setitem__(self, key, value):
         self._setdata(key, value)
 
-    def __getattr__(self, key, var=False, default=True):
+    def __getattr__(self, key, default=True, **kwargs):
         """
         Interfaces with _sect to retrieve the Var and Sect child objects
         _sect should always be a NullDict
@@ -234,22 +234,20 @@ class Sect:
             Attribute name to look up
         var: bool, defaults=False
             Return the item as a Var
+        Var: bool, defaults=False
+            Return the item as a Var
         default: bool, defaults=True
             Return a Var's default value if available
         """
         val = self._sect[key]
 
         if isinstance(val, Var):
-            if var:
+            if kwargs.get('var') or kwargs.get('Var'):
                 self._log(3, '__getattr__', f'[{key!r}] Returning as Var: {val}')
                 return val
 
-            if default and val.value is Null:
-                self._log(3, '__getattr__', f'[{key!r}] Returning {val}.default')
-                return val.default
-
-            self._log(3, '__getattr__', f'[{key!r}] Returning {val}.value')
-            return val.value
+            self._log(3, '__getattr__', f'[{key!r}] Returning {val}.getValue()')
+            return val.getValue()
 
         if not isinstance(val, (Sect, NullType)):
             self._log('e', '__getattr__', f'Item of _sect is not a Var, Sect, or Null type: [{key!r}] = {type(val)} {val}')
@@ -721,7 +719,7 @@ class Sect:
         self._log(0, 'deepCopy', f'Creating deep copy using memo: {memo}')
         return copy.deepcopy(self, memo)
 
-    def get(self, key, other=None, var=False, default=True):
+    def get(self, key, other=None, default=True, **kwargs):
         """
         Parameters
         ----------
@@ -729,12 +727,14 @@ class Sect:
             Item name to look up
         other: any, defaults=None
             If
-        var: bool, defaults=False
-            Return the item as a Var
         default: bool, defaults=True
             If a default value is available, return that instead of `other`
+        **kwargs: dict
+            Additional key-words that are passed to __getattr__:
+                var: bool, defaults=False
+                    Return the item as a Var. This may also be capitalized as Var=bool
         """
-        val = self.__getattr__(key, var=var, default=default)
+        val = self.__getattr__(key, default=default, **kwargs)
 
         if val is Null:
             self._log(3, 'get', f'[{key!r}] Val is Null, returning other: {other!r}')
@@ -1036,9 +1036,9 @@ class Sect:
         if isinstance(data, (str, Path)):
             # File case
             if os.path.isfile(data):
-                self._log(0, 'loadDict', f'Loading from yaml.loads(file={data})')
+                self._log(0, 'loadDict', f'Loading from yaml.safe_load(file={data})')
                 with open(data, 'r') as file:
-                    data = yaml.load(file, Loader=yaml.FullLoader)
+                    data = yaml.safe_load(file)
 
             elif glob.has_magic(data):
                 data = [self.loadDict(file) for file in glob.glob(data)]
@@ -1048,8 +1048,8 @@ class Sect:
             else:
                 try:
                     # Raw yaml strings supported only
-                    data = yaml.load(data, Loader=yaml.FullLoader)
-                    self._log(0, 'loadDict', 'Loaded from yaml.load(string)')
+                    data = yaml.safe_load(data)
+                    self._log(0, 'loadDict', 'Loaded from yaml.safe_load(string)')
                 except:
                     raise TypeError(f'Data input is a string but is not a file nor a yaml string: {data}')
 

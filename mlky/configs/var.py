@@ -6,6 +6,8 @@ import logging
 import re
 import yaml
 
+from pathlib import Path
+
 from . import (
     ErrorsDict,
     funcs,
@@ -25,7 +27,8 @@ Types  = {
     'list'   : list,
     'set'    : set,
     'str'    : str,
-    'tuple'  : tuple
+    'tuple'  : tuple,
+    'path'   : Path,
 }
 TypeNames = {v: k for k, v in Types.items()}
 
@@ -42,7 +45,9 @@ def getType(dtype):
 
 class Var:
     value    = Null
+    default  = Null
     defs     = Null
+    dtype    = Null
     debug    = set()
     missing  = True
     required = False
@@ -58,7 +63,7 @@ class Var:
     _disable_replace_inline = False
 
     # Will only call replace on magic strings, not any value
-    _replace_only_if_magic = True
+    _replace_only_if_magic = False
 
     # Recursively call replace so values get populated correctly no matter order of operation
     _replace_recursively = True
@@ -166,35 +171,20 @@ class Var:
         """
         Calls reset on the children of this Var's value if it is a list type
         """
-        # if value is Null:
-        #     value = self.getValue()
-        #
-        # if isinstance(value, Var):
-        #     self._debug(2, 'deepReplace', f'Calling replace on Var {item}')
-        #     value.replace(**kwargs)
-        # elif 'Sect' in str(type(value)):
-        #     pass
-        # elif isinstance(value, (list, tuple)):
-        #     pass
-        # else:
-        #     if isinstance(value, str):
-        #         self.replace(**kwargs)
-        #     return
-
         for i, item in enumerate(value):
             if 'Sect' in str(type(item)):
                 self._debug(2, 'deepReplace', f'Calling [{i}].replaceVars on {item}')
                 item.replaceVars()
 
-            elif isinstance(item, str):
+            elif isinstance(item, (list, tuple)):
+                self._debug(2, 'deepReplace', f'Calling deepReplace on child list {item}')
+                self.deepReplace(item)
+
+            else:
                 new = self.replace(item)
                 if new is not None:
                     self._debug(2, 'deepReplace', f'Replacing index [{i}] {item!r} with {new!r}')
                     value[i] = new
-
-            elif isinstance(item, (list, tuple)):
-                self._debug(2, 'deepReplace', f'Calling deepReplace on child list {item}')
-                self.deepReplace(item)
 
     def __setattr__(self, key, value, replace=True, validate=True):
         """
@@ -231,6 +221,20 @@ class Var:
 
         elif key == 'dtype':
             value = getType(value)
+
+            if self.default:
+                try:
+                    self.default = value(self.default)
+                    self._debug(3, '__setattr__', f'Default value casted to dtype {value}')
+                except Exception as e:
+                    self._debug(3, '__setattr__', f'Failed to cast default {self.default} to dtype {value}: {e}')
+
+        elif key == 'default' and self.dtype:
+            try:
+                value = self.dtype(value)
+                self._debug(3, '__setattr__', f'Default value casted to dtype {self.dtype}')
+            except Exception as e:
+                self._debug(3, '__setattr__', f'Failed to cast default {value} to dtype {self.dtype}: {e}')
 
         # Cast subtype dtypes to real types
         elif key == 'subtypes':
@@ -458,6 +462,9 @@ class Var:
 
                 # List may have changed, set as the original
                 self.original = self.getValue()
+            elif key == '*':
+                self._debug(0, 'applyDefinition', f'Apply * defs')
+                self.applyDefinition(val)
             else:
                 self._debug(0, 'applyDefinition', f'Setting {key} = {val!r}')
                 setattr(self, key, val)
@@ -536,12 +543,15 @@ class Var:
         # If a user passes in a value to validate(), return that on any call to this function
         # This helps registered functions retrieve a temporary value instead
         if self._tmp_value is not Null:
+            self._debug(0, 'getValue', f'Returning tmp value: {self._tmp_value}')
             return self._tmp_value
 
         # Otherwise if default is enabled, return that
         if default and self.value is Null:
+            self._debug(0, 'getValue', f'Returning default value: {self.default}')
             return self.default
 
+        self._debug(0, 'getValue', f'Returning current value: {self.value}')
         return self.value
 
     def getSubType(self, value):
@@ -634,7 +644,11 @@ class Var:
                         if cast:
                             val = funcs.getRegister('config.cast')(val, dtype=self.dtype, _debug=self._debug)
 
-                        lines.append(['- ' + yaml.dump(val).split('\n')[0]])
+                        # YAML doesn't support Path objects
+                        if isinstance(val, Path):
+                            val = str(val)
+                        
+                        lines.append(['- ' + yaml.safe_dump(val).split('\n')[0]])
             else:
                 line = f'{key}: []'
         else:
@@ -644,7 +658,11 @@ class Var:
             if value is Null:
                 value = '\\'
 
-            line = yaml.dump({key: value})[:-1]
+            # YAML doesn't support Path objects
+            if isinstance(value, Path):
+                value = str(value)
+
+            line = yaml.safe_dump({key: value})[:-1]
 
         # Apply spacing offset
         if lines:
