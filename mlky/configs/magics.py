@@ -89,11 +89,19 @@ def replace(value, instance=None, dtype=None, callResets=False, _debug=_debug):
     >>> replace(config.file)
     '/abc/1/2'
     """
+    # Discover the root object
+    root = None
+    if instance:
+        root = instance
+        while root._f.parent:
+            root = root._f.parent
+
     if isinstance(value, str):
         # Special case for special Null syntax
         if value == '\\':
             return Null
 
+        magic_regex = r'\${(.*)}'
         matches = re.findall(magic_regex, value)
 
         for match in matches:
@@ -105,7 +113,7 @@ def replace(value, instance=None, dtype=None, callResets=False, _debug=_debug):
                     _debug('e', 'replace', f'Keys path provided is invalid, returning without replacement: {keys!r}')
                     return value
 
-                data = instance or Config
+                data = root or instance
                 for key in keys[1:]:
                     data = data.get(key, other=Null, var=True)
 

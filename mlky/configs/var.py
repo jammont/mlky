@@ -505,15 +505,12 @@ class Var:
         elif self._replace_only_if_magic:
             return
 
-        # Find the root parent
-        parent = self.parent
-        while parent._prnt:
-            parent = parent._prnt
-
-        # TODO: This is broken, just default to the global instance until further research
-        parent = None
-
-        replacement = funcs.getRegister('config.replace')(value, parent, dtype=self.dtype, callResets=self._replace_recursively, _debug=self._debug)
+        replacement = funcs.getRegister('config.replace')(value, 
+            instance   = self.parent,
+            dtype      = self.dtype,
+            callResets = self._replace_recursively,
+            _debug     = self._debug
+        )
         if replacement is not value:
             self._debug(0, 'replace', f'Replaced {value!r} with {replacement!r}')
 
@@ -647,7 +644,7 @@ class Var:
                         # YAML doesn't support Path objects
                         if isinstance(val, Path):
                             val = str(val)
-                        
+
                         lines.append(['- ' + yaml.safe_dump(val).split('\n')[0]])
             else:
                 line = f'{key}: []'
