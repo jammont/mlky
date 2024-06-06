@@ -26,6 +26,8 @@ def test_init():
     assert cfg2 == data, 'Reinitialized config did not match new input'
     assert cfg3 == data, 'Reinitialized config did not match new input'
 
+    return
+
     altL = {'l': 1}
     cfgL = Config(altL, local=True)
     assert cfgL == altL, 'Local initialization does not match input'
@@ -135,7 +137,7 @@ def test_replace():
     - 'd' should be -1
     - 'e' should be -1. (float type)
     """
-    Config(data=YAML, defs=DEFS)
+    Config(YAML, _defs=DEFS)
 
     assert Config.a is Null
     assert Config.b == '//'

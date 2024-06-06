@@ -85,11 +85,8 @@ def generate(file, defs, convertlisttypes, disablemagicsreplacement):
     """\
     Generates a default config template using the definitions file
     """
-    Config._opts.convertListTypes = convertlisttypes
-    Config._opts.Var._disable_reset_magics = disablemagicsreplacement
-
-    Config(data={}, defs=defs)
-    Config.generateTemplate(file=file)
+    Config({}, _defs=defs)
+    Config.toYaml(file=file)
     click.echo(f"Wrote template configuration to: {file}")
 
 #%%

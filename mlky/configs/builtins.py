@@ -6,13 +6,8 @@ import os
 import re
 import uuid
 
-from types import FunctionType
-
-from . import (
-    funcs,
-    Null,
-    register
-)
+from .funcs import register
+from .null  import Null
 
 
 @register()
@@ -69,6 +64,7 @@ def cpu_count(*args):
     """
     return os.cpu_count()
 
+
 @register(name='nan')
 def nan(*args):
     """
@@ -80,6 +76,7 @@ def nan(*args):
         NaN
     """
     return float('NaN')
+
 
 @register()
 def oneof(var, *opts, options=[], regex=False):
@@ -354,51 +351,3 @@ def if_one_then_all(items):
     if defined and undefined:
         return f'If one is defined, all must be defined: defined={defined}, undefined={undefined}'
     return True
-
-
-# dtypes assigned to these values always pass checks
-Typeless = (Null, 'Null', None, 'None', 'any')
-
-@register()
-def check_dtype(value, dtype):
-    """
-    Checks the type of a given value.
-
-    Parameters
-    ----------
-    value: any
-        The value in question
-    dtype: any
-        The type this value is supposed to be. If type in [Null, 'Null', None,
-        'None', 'any'] then the check is disabled and will return True.
-        Otherwise, uses the Types dictionary to lookup the function to validate
-        with.
-
-    Returns
-    -------
-    True | str | list of str
-        Returns True if this value is the expected type. If it is not, returns
-        either a string or list of strings describing the error.
-    """
-    if dtype in Typeless:
-        return True
-
-    if isinstance(dtype, list):
-        if True not in [check_dtype(value, t) for t in dtype]:
-            return f'Value {value!r} (type: {type(value)}) is not one of types {dtype}'
-        return True
-
-    # Use a custom function to check the type
-    if isinstance(dtype, FunctionType):
-        check = dtype(value)
-
-    # If not a function, this must be a python-registered type
-    elif not isinstance(dtype, type):
-        return f'Unknown type: {dtype!r}'
-
-    else:
-        check = isinstance(value, dtype)
-
-    if check is False:
-        return f'Wrong type: Expected {dtype!r} Got {type(value)}'
-    return check

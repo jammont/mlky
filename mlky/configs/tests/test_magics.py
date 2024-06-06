@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from mlky.configs import magic_regex
+from mlky import MAGIC
 
 @pytest.mark.parametrize("string,expected", [
     ("${.}", True),
@@ -26,12 +26,12 @@ from mlky.configs import magic_regex
     ("", False),
     ("$", False),
     ("${", False),
-    ("${}", False),
-    ("${?}", False),
-    ("${@}", False),
-    ("${n}", False),
-    ("${\}", False),
-    ("${0}", False),
+    ("${}", True),
+    ("${?}", True),
+    ("${@}", True),
+    ("${n}", True),
+    ("${\}", True),
+    ("${0}", True),
     (".n", False),
     ("$n", False),
     ("!n", False),
@@ -56,4 +56,4 @@ def test_magic_regex(string, expected):
     """
     Ensures the regex is working in expected ways
     """
-    assert bool(re.findall(magic_regex, string)) == expected
+    assert bool(re.findall(MAGIC, string)) == expected
