@@ -785,17 +785,18 @@ class BaseSect:
             if isinstance(args, str):
                 args = [args,]
 
+            children = self._getChildren()
             for tag in args:
-                children = []
-                for child in self._getChildren():
+                tagged = []
+                for child in children:
                     if tag in child._defs.get('tags', []):
-                        children.append(child)
+                        tagged.append(child)
 
-                errors[f'{check}[{tag}]'] = funcs.getRegister(check)(children)
+                errors[f'{check}[{tag}]'] = funcs.getRegister(check)(tagged)
 
         # Validate children
         for child in self._getChildren():
-            errors[child._name] = child.validate(report=False)
+            errors[child._name] = child.validate(report=False, asbool=False)
 
         if report:
             reportErrors(errors.reduce())

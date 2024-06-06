@@ -19,11 +19,12 @@ class Var(BaseSect):
     Container for variable objects
     Bases from BaseSect but acts differently than other Sect classes
     """
-    _logger = Logger
-    _label  = 'V='
-    _data   = Null
-    _dtype  = Null
-    _tmpVal = Null
+    _logger    = Logger
+    _label     = 'V='
+    _data      = Null
+    _dtype     = Null
+    _tmpVal    = Null
+    _isDefault = False
 
     # Attempt to coerce values (self._data) to the expected dtype
     _coerce = True
@@ -58,8 +59,9 @@ class Var(BaseSect):
     def _addData(self, value):
         """
         """
-        self._data    = value
-        self._missing = False
+        self._data      = value
+        self._missing   = False
+        self._isDefault = False
 
         self._buildDefs()
 
@@ -155,6 +157,9 @@ class Var(BaseSect):
 
         if self._missing and self._data is Null:
             self._data = self._defs.get('default', Null)
+
+            # Track that this value is the default value
+            self._isDefault = True
 
         # Apply interpolation to strings
         if self._interpolate and isinstance(self._data, str):
@@ -278,6 +283,11 @@ class Var(BaseSect):
             self._log(0, 'validate', f'This Var is missing and not strict')
             return errors
 
+        # Don't run checks if the value is just the default value
+        if self._isDefault:
+            self._log(0, 'validate', f'Using default value, skipping checks')
+            return errors
+
         if not self._dtype.istype(value):
             errors['type'] = f'Wrong type: Expected {self._dtype.label!r}, got {type(value)}'
 
@@ -285,9 +295,9 @@ class Var(BaseSect):
             args   = []
             kwargs = {}
 
-            if hasattr(check, 'items'):
-                (check, args), = list(check.items())
-                if hasattr(args, 'items'):
+            if isSectType(check, 'dict'):
+                (check, args), = check.items()
+                if isSectType(args, 'dict'):
                     kwargs = args
                     args = []
 
