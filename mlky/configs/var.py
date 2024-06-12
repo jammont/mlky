@@ -214,7 +214,7 @@ class Var(BaseSect):
         return self.getValue()
 
 
-    def toYaml(self, tags=[], blacklist=False, **kwargs):
+    def toYaml(self, tags=[], blacklist=False, nulls=True, **kwargs):
         """
         """
         if tags:
@@ -225,6 +225,11 @@ class Var(BaseSect):
             elif not hasTags:
                 return []
 
+        value = self.getValue()
+
+        if not nulls and value is Null:
+            return []
+
         if isSectType(self._parent, 'list'):
             line = f'- {self._dtype.yaml(self.getValue())}'
 
@@ -233,7 +238,7 @@ class Var(BaseSect):
 
         else:
             self._log('e', 'toYaml', 'Calling toYaml on a Var with no parent is not supported')
-            return
+            return []
 
         flag  = '*' if self._defs.get('required') else ' '
         dtype = self._dtype.label

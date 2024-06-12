@@ -662,20 +662,32 @@ class BaseSect:
         return self
 
 
-    def toYaml(self, string=True, header=True, tags=[], blacklist=False, **kwargs):
+    def toYaml(self, string=True, file=None, header=True, tags=[], blacklist=False, nulls=True, comments='inline', space=False, **kwargs):
         """
         Parameters
         ----------
         string : bool, default=True
             Converts the formatted list of tuples to a string ready for printing or
             writing to file
+        file : str, default=None
+            Write the YAML to this file
         header : bool, default=True
+            Adds the mlky header and sets the top level section as "generated"
         tags : list
             List of tags to include in the output. This acts as a whitelist where all
             other tags will be excluded
         blacklist : bool
             All tags in the `tags` parameter will be blacklisted instead, where tags
             not in this list will be accepted
+        nulls : bool, default=True
+            Include Vars that return Null. Set False to exclude these
+        comments : str, default='inline'
+            Comment styling:
+                - inline = key: value # comment
+                - above  = Comment line above the key: value (Not Implemented)
+                - None   = Comments removed
+        space : bool, default=False
+            Adds a blank line space between lines
         **kwargs : dict
             Additional key-word arguments that apply to specific Sect types:
             List:
@@ -715,7 +727,15 @@ class BaseSect:
         # Convert the children to YAML
         lines = []
         for child in self._getChildren():
-            lines += child.toYaml(string=False, tags=tags, blacklist=blacklist, **kwargs)
+            lines += child.toYaml(
+                string    = False,
+                tags      = tags,
+                blacklist = blacklist,
+                nulls     = nulls,
+                comments  = comments,
+                space     = space,
+                **kwargs
+        )
 
         # Apply offsetting to children
         for child in lines:
@@ -729,9 +749,38 @@ class BaseSect:
         if line:
             lines = [line] + lines
 
+        # Format the comments
+        if comments == 'above':
+            # # flag | dtype | sdesc
+            # key: value
+
+            hold = []
+            for line in lines:
+                offset = ' ' * (len(line[0]) - len(line[0].lstrip()))
+
+                # Add spacing
+                if space:
+                    offset = f'\n{offset}'
+
+                hold.append([offset + '# ' + ' | '.join(line[1:])])
+                hold.append([line[0]])
+
+            lines = hold
+
+        else:
+            if comments == 'inline':
+                pass # lines list is already formatted properly to this style
+            elif comments in (None, False):
+                lines = [[line[0]] for line in lines]
+
+            # Add spacing
+            if space:
+                for line in lines:
+                    line[0] = '\n' + line[0]
+
         # Format
-        if string:
-            return '\n'.join(
+        if string or file:
+            yaml = '\n'.join(
                 printTable(lines, columns = {
                         0: {'delimiter': '#'},
                         1: {'delimiter': '|'},
@@ -740,6 +789,13 @@ class BaseSect:
                     # truncate = truncate
                 )
             )
+            
+            if file:
+                with open(file, 'w') as f:
+                    f.write(yaml)
+
+            if string:
+                return yaml
 
         return lines
 

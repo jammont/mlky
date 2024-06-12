@@ -25,6 +25,12 @@ class ListSect(BaseSect):
 
     def _subinit(self, _data=[], **kwargs):
         """
+        Initializes the self._data object
+
+        Parameters
+        ----------
+        _data: list, default=[]
+            Initial list object
         """
         for key, value in enumerate(_data):
             self._data.append(self._makeObj(key, value))
@@ -35,6 +41,16 @@ class ListSect(BaseSect):
 
 
     def _addData(self, key, value):
+        """
+        Adds data to self._data
+
+        Parameters
+        ----------
+        key: int or 'append'
+            If int, changes value at position, elif append then appends a new value
+        value: any
+            Value to insert
+        """
         if key == 'append':
             self._log(1, '_addData', f'Appending index[{key}] = {value}')
             self._data.append(value)
@@ -44,6 +60,9 @@ class ListSect(BaseSect):
 
 
     def _applyDefs(self):
+        """
+        Applies the rules of self._defs, created by self._buildDefs()
+        """
         defs = self._defs
         if not defs:
             return
@@ -62,10 +81,26 @@ class ListSect(BaseSect):
 
 
     def _getChildren(self):
+        """
+        Retrieves the child objects as Vars
+
+        Returns
+        -------
+        list
+            List of SectTypes
+        """
         return self.toList(var=True, recursive=False)
 
 
     def append(self, value):
+        """
+        Appends a new child to this object
+
+        Parameters
+        ----------
+        value: any
+            Object to append
+        """
         obj = self._makeObj(len(self._data), value)
         self._addData('append', obj)
 
@@ -90,12 +125,35 @@ class ListSect(BaseSect):
     def patchCompatible(self, item):
         """
         Checks if another object is patch compatible with this object
+
+        Parameters
+        ----------
+        item: any
+            Object to check compatibility with
+
+        Returns
+        -------
+        bool
+            True if compatible, False otherwise
         """
         return isinstance(item, (type(self), list))
 
 
     def toList(self, var=False, recursive=False):
         """
+        Converts to the Python primitive value: list
+
+        Parameters
+        ----------
+        var: bool, default=False
+            Return Var objects instead of their held values
+        recursive: bool, default=False
+            Recursively convert children to their primitive types as well
+
+        Returns
+        -------
+        data: list
+            This object as a list
         """
         data = []
         for child in self._data:
@@ -111,12 +169,19 @@ class ListSect(BaseSect):
 
     def toPrim(self, var=False, recursive=True):
         """
+        Converts to the Python primitive value: list
+
         Parameters
         ----------
         var: bool, default=False
             Return Var objects instead of their held values
         recursive: bool, default=True
             Recursively convert children to their primitive types as well
+
+        Returns
+        -------
+        list
+            This object as a list
         """
         return self.toList(var, recursive)
 
