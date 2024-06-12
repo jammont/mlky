@@ -109,12 +109,12 @@ class Path(Types):
 # Define what keys would match to which dtype class
 dtypes = {
 # class: [keys, ]
-    Str: (str, 'str', 'string'),
-    Int: (int, 'int', 'integer'),
-    Bool: (bool, 'bool', 'boolean'),
-    Float: (float, 'float'),
-    Bytes: (bytes, 'bytes'),
-    Path: (pathlib.Path, 'Path', 'path'),
+    Str: (Str, str, 'str', 'string'),
+    Int: (Int, int, 'int', 'integer'),
+    Bool: (Bool, bool, 'bool', 'boolean'),
+    Float: (Float, float, 'float'),
+    Bytes: (Bytes, bytes, 'bytes'),
+    Path: (Path, pathlib.Path, 'Path', 'path'),
 }
 
 # Convert into a hashmap

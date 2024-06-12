@@ -55,6 +55,7 @@ class BaseSect:
     _interpolate    = True
     _relativity     = True
     _convertSlashes = True
+    _nullsEqMissing = False
 
 
     def __init__(self, _data, key='', parent=None, **kwargs):
@@ -166,6 +167,10 @@ class BaseSect:
 
     def __iter__(self):
         raise NotImplementedError(f'Subclass {self.__class__} must define __iter__')
+
+
+    def __len__(self):
+        return len(self._data)
 
 
     def __getattr__(self, key, other=Null, var=False):
@@ -430,6 +435,7 @@ class BaseSect:
             _interpolate    = self._interpolate,
             _relativity     = self._relativity,
             _convertSlashes = self._convertSlashes,
+            _nullsEqMissing = self._nullsEqMissing,
         )
 
         # obj.updateDefs(self._defs)
@@ -758,7 +764,7 @@ class BaseSect:
         raise NotImplementedError
 
 
-    def validate(self, report=True, asbool=True):
+    def validate(self, report=True, asbool=True, **kwargs):
         """
         Validates a Sect and its children
 
@@ -768,6 +774,10 @@ class BaseSect:
             Reports the (reduced) errors to logger.error in a pretty format
         asbool: bool, default=True
             Returns the errors dict as an inverted boolean, True for no errors, False for errors
+        **kwargs: dict
+            Additional key-word arguments to pass onto child validations. These include:
+            - strict: bool, default=False
+                ...
 
         Returns
         -------
@@ -796,7 +806,7 @@ class BaseSect:
 
         # Validate children
         for child in self._getChildren():
-            errors[child._name] = child.validate(report=False, asbool=False)
+            errors[child._name] = child.validate(report=False, asbool=False, **kwargs)
 
         if report:
             reportErrors(errors.reduce())

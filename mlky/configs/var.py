@@ -19,12 +19,13 @@ class Var(BaseSect):
     Container for variable objects
     Bases from BaseSect but acts differently than other Sect classes
     """
-    _logger    = Logger
-    _label     = 'V='
-    _data      = Null
-    _dtype     = Null
-    _tmpVal    = Null
-    _isDefault = False
+    _logger     = Logger
+    _label      = 'V='
+    _data       = Null
+    _dtype      = Null
+    _tmpVal     = Null
+    _isDefault  = False
+    _multiTyped = False
 
     # Attempt to coerce values (self._data) to the expected dtype
     _coerce = True
@@ -40,6 +41,9 @@ class Var(BaseSect):
 
     # Skips validation if called
     _skipValidate = False
+
+    # If a value is Null, sets self as missing
+    _nullsEqMissing = False
 
 
     def _subinit(self, _data, **kwargs):
@@ -75,33 +79,19 @@ class Var(BaseSect):
 
         self._log(0, '_applyDefs', f'Applying defs: {defs}')
 
-        dtype = getType(defs.get('dtype', 'any'))
-        if dtype != self._dtype:
-            self._dtype = dtype
-            self._log(0, '_applyDefs', f'New dtype: {self._dtype}')
+        subtypes = defs.get('subtypes')
+        if subtypes:
+            self._multiTyped = True
+            self._log(0, 'updateDefs', f'_multiTyped enabled')
 
-
-    def _updateDefs(self):
-        """
-        """
-        parentDefs = self._parent._defs
-
-        key  = f'.{self._key}'
-        defs = parentDefs.get(key, {})
-
-        items = parentDefs.get('items', [])
-        for item in items:
-            key = item['key']
-            if key == '*':
-                self._log(0, 'updateDefs', f'Matched * item defs: {item}')
-                defs = defs | item
-
-        self._log(0, 'updateDefs', f'Updating defs with: {defs}')
-        self._defs = defs
-
-        # Update to the new dtype
-        self._dtype = getType(defs.get('dtype', 'any'))
-        self._log(0, 'updateDefs', f'New dtype: {self._dtype}')
+            # Cast the subtypes to dtype objects
+            for sub in subtypes:
+                sub.dtype = getType(sub.dtype)
+        else:
+            dtype = getType(defs.get('dtype', 'any'))
+            if dtype != self._dtype:
+                self._dtype = dtype
+                self._log(0, '_applyDefs', f'New dtype: {self._dtype}')
 
 
     def _updateDefs(self, parentDefs):
@@ -123,21 +113,26 @@ class Var(BaseSect):
         if not defs:
             return
 
-        # Check if this should be a Dict or List type rather than Var
-        dtype = defs.get('dtype')
-        if dtype is None:
-            raise AttributeError(f'The dtype of every key must be defined in the defs, missing for: {key}')
-        # elif dtype in ('dict', 'list'):
-        #     self._mutate(dtype)
-        #     self.updateDefs(this)
-        #     return
-
         self._log(0, 'updateDefs', f'Updating defs with: {defs}')
         self.__dict__['_defs'] = defs
 
-        # Update to the new dtype
-        self._dtype = getType(defs['dtype'])
-        self._log(0, 'updateDefs', f'New dtype: {self._dtype}')
+        subtypes = defs.get('subtypes')
+        if subtypes:
+            self._multiTyped = True
+            self._log(0, 'updateDefs', f'_multiTyped enabled')
+
+            # Cast the subtypes to dtype objects
+            for sub in subtypes:
+                sub.dtype = getType(sub.dtype)
+        else:
+            # Check if this should be a Dict or List type rather than Var
+            dtype = defs.get('dtype')
+            if dtype is None:
+                raise AttributeError(f'The dtype of every key must be defined in the defs, missing for: {key}')
+
+            # Update to the new dtype
+            self._dtype = getType(defs['dtype'])
+            self._log(0, 'updateDefs', f'New dtype: {self._dtype}')
 
 
     def getValue(self):
@@ -183,6 +178,10 @@ class Var(BaseSect):
 
             self._data = data
 
+        # Switch the subtype if it's defined
+        if self._multiTyped:
+            self._switchSubtype(self._data)
+
         # Attempt to coerce this value to the expected dtype
         if self._coerce and not self._dtype.istype(self._data):
             try:
@@ -197,6 +196,13 @@ class Var(BaseSect):
         if self._convertSlashes and self._data == '\\':
             self._data = Null
             self._log(1, 'getValue', f'Converted backslash to Null')
+
+            if self._nullsEqMissing:
+                self._log(1, 'getValue', f'_nullsEqMissing enabled, setting _missing = True')
+                self._missing = True
+
+                # Call getValue again to retrieve a default value and possibly interpolation
+                return self.getValue()
 
         return self._NullOrNone(self._data)
 
@@ -241,23 +247,6 @@ class Var(BaseSect):
         No children, do nothing
         """
         pass
-
-
-    def updateDefsFromList(self):
-        """
-        """
-        parentDefs = self._parent._defs
-
-        key  = f'.{self._key}'
-        defs = parentDefs.get(key, {})
-
-        if defs:
-            self._log(0, 'updateDefsFromList', f'Updating defs with: {defs}')
-            self._defs = defs
-        elif 'match' in parentDefs:
-            for case in parentDefs['match']:
-                if case:
-                    pass
 
 
     def validate(self, value=Null, strict=False, **kwargs):
@@ -308,3 +297,16 @@ class Var(BaseSect):
         self._tmpVal = Null
 
         return errors
+
+
+    def _switchSubtype(self, value):
+        """
+        """
+        self._log(1, '_switchSubtype', f'Attempting to switch subtype to type {type(value)}')
+
+        for sub in self._defs.subtypes:
+            if sub.dtype.istype(value):
+                self._log(1, '_switchSubtype', f'Matched to {sub}')
+                self._defs |= sub
+                self._dtype = sub.dtype
+                break
