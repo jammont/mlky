@@ -29,3 +29,54 @@ def test_flag_coerce():
 
     s.a = '2'
     assert s.a == '2'
+
+
+def test_subtypes():
+    """
+    """
+    defs = """\
+    .multi:
+        sdesc: This is a multi-typed variable
+        default: 1
+        subtypes:
+            - dtype: int
+              default: 1
+              checks:
+                - compare:
+                    gt: 0
+            - dtype: str
+              default: '/some/file'
+              checks:
+                - isfile
+    """
+    s = Sect(_defs=defs)
+
+    s.multi = 'abc'
+    assert s.validate(asbool=False, report=False) == {'.multi': {'isfile': 'File Not Found: abc'}}, 'Failed to switch subtype to str'
+
+    s.multi = -1
+    assert s.validate(asbool=False, report=False) == {'.multi': {'compare': ['Value must be greater than: 0']}}, 'Failed to switch subtype to int'
+
+
+def test_nullsEqMissing():
+    """
+    """
+    defs = """\
+    .multi:
+        subtypes:
+            - dtype: int
+              default: 1
+            - dtype: str
+              default: 'a'
+    """
+    data = """\
+    multi: \\
+    """
+
+    s = Sect(data, _defs=defs, _nullsEqMissing=True)
+    v = s.get('multi', var=True)
+
+    assert s.multi == 'a', 'Failed to switch subtype and retrieve dtype'
+
+    s.multi = 3
+    assert s.multi == 3, 'Failed to switch subtype'
