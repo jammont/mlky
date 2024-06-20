@@ -315,3 +315,10 @@ class Var(BaseSect):
                 self._defs |= sub
                 self._dtype = sub.dtype
                 break
+
+
+    def overrideKey(self, path, value):
+        """
+        """
+        self._log(0, 'overrideKey', f'Overriding _data with: {value!r}')
+        self._data = value

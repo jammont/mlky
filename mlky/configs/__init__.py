@@ -23,7 +23,11 @@ from .var  import Var
 
 from . import builtins
 
-from .interpolate import MAGIC
+from .interpolate import (
+    MAGIC,
+    interpolate,
+    lookup
+)
 
 # Re-enable at the end
 Null._warn = True

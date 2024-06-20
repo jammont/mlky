@@ -2,8 +2,9 @@
 """
 import copy
 import logging
+import re
 
-from .funcs  import ErrorsDict, reportErrors
+from .funcs  import ErrorsDict, getRegister, reportErrors
 from .null   import Null
 from ..utils import printTable
 
@@ -32,20 +33,21 @@ class BaseSect:
     """
     Section base class
     """
-    _logger  = Logger
-    _labels  = True  # Toggle labels in __repr__
-    _label   = ''    # Object label, defined by subclass
-    _data    = None  # Internal formatted data
-    _input   = None  # Original input data
-    _key     = None  # Key name of self
-    _parent  = None  # Parent object
-    _name    = ''    # Full name of self (dot notational)
-    _offset  = ''    # Hierarchical offset for padding
-    _debug   = set() # Debug levels and names
-    _nulls   = True  # Return Null values as defaults instead of Nones
-    _defs    = {}    # Definition for this object to control validation
-    _missing = False # Only set by a defs object
-    _dtype   = ''    # Data type for this object
+    _logger   = Logger
+    _labels   = True  # Toggle labels in __repr__
+    _label    = ''    # Object label, defined by subclass
+    _data     = None  # Internal formatted data
+    _input    = None  # Original input data
+    _key      = None  # Key name of self
+    _parent   = None  # Parent object
+    _name     = ''    # Full name of self (dot notational)
+    _offset   = ''    # Hierarchical offset for padding
+    _debug    = set() # Debug levels and names
+    _nulls    = True  # Return Null values as defaults instead of Nones
+    _defs     = {}    # Definition for this object to control validation
+    _missing  = False # Only set by a defs object
+    _dtype    = ''    # Data type for this object
+    _override = None  # CLI override data
 
     # ListSect flags
     _patchAppend    = False
@@ -101,6 +103,11 @@ class BaseSect:
 
         # Build the defs after self._data is populated which may influence how the defs populate
         self._buildDefs()
+
+        if self._override:
+            self._log(3, '__init__', 'Overriding keys')
+            for key, value in self._override:
+                self.overrideKey(key, value)
 
 
     def __bool__(self):
@@ -718,9 +725,13 @@ class BaseSect:
             line = ''
             offset = 0
 
-        flag  = '*' if self._defs.get('required') else ' '
+        defs = self._defs
+        if defs is None:
+            defs = {}
+
+        flag  = '*' if defs.get('required') else ' '
         dtype = self._dtype
-        sdesc = self._defs.get('sdesc', '')
+        sdesc = defs.get('sdesc', '')
         if line:
             line = [line, flag, dtype, sdesc]
 
@@ -789,7 +800,7 @@ class BaseSect:
                     # truncate = truncate
                 )
             )
-            
+
             if file:
                 with open(file, 'w') as f:
                     f.write(yaml)
@@ -858,7 +869,7 @@ class BaseSect:
                     if tag in child._defs.get('tags', []):
                         tagged.append(child)
 
-                errors[f'{check}[{tag}]'] = funcs.getRegister(check)(tagged)
+                errors[f'{check}[{tag}]'] = getRegister(check)(tagged)
 
         # Validate children
         for child in self._getChildren():
@@ -871,3 +882,54 @@ class BaseSect:
             return not bool(errors.reduce())
 
         return errors
+
+
+    def overrideKey(self, path, value):
+        """
+        Follows a path to either override an existing key or create the key at the
+        path.
+        """
+        if isinstance(path, str):
+            # Remove relative pathing
+            if path.startswith('.'):
+                path = path[1:]
+
+            # path = path.split('.')
+            path = re.findall(r'[^.[\s]+', path)
+
+        key = path[0]
+        self._log(0, 'overrideKey', f'Overriding key {key!r}')
+
+        # Match to a list item
+        isList = False
+        if key.endswith(']'):
+            isList = True
+            key = key[:-1]
+
+        if key.isnumeric():
+            key = int(key)
+
+        child = self.get(key, var=True)
+
+        # If the child already exists, keep searching for the correct object to override
+        if isSectType(child):
+            self._log(0, 'overrideKey', 'Key exists, overriding child')
+            child.overrideKey(path[1:], value)
+        else:
+            # Create a list or dict type
+            if len(path) > 1:
+                if isList:
+                    self._log(0, 'overrideKey', 'Creating new child list')
+                    self[key] = []
+                else:
+                    self._log(0, 'overrideKey', 'Creating new child dict')
+                    self[key] = {}
+                self[key].overrideKey(path[1:], value)
+            # Create a Var
+            else:
+                if isList:
+                    self._log(0, 'overrideKey', f'Creating new child as list [{value!r}]')
+                    self[key] = [value]
+                else:
+                    self._log(0, 'overrideKey', f'Creating new child [{value!r}]')
+                    self[key] = value

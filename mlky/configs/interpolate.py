@@ -12,7 +12,7 @@ from .null  import Null
 MAGIC = r'\${([^}]*)\}'
 
 
-def lookup(string, relative, absolute, print=print):
+def lookup(string, relative, absolute=None, var=False, print=print):
     """
     Performs a lookup on Sect objects by traversing the _parent objects tree using
     either a relative path or the absolute path from the root parent
@@ -23,8 +23,11 @@ def lookup(string, relative, absolute, print=print):
         Key string to look up
     relative : SectType
         The relative path starting point
-    absolute : SectType
-        The absolute path starting point
+    absolute : SectType, default=None
+        The absolute path starting point. If None, the relative path is used as the
+        absolute path as well
+    var : bool, default=False
+        If true, retrieve Var objects themselves, else return the value of the Var
     print : function, default=print
         The reporting function
 
@@ -33,6 +36,9 @@ def lookup(string, relative, absolute, print=print):
     obj : any
         The value at key
     """
+    if absolute is None:
+        absolute = relative
+
     parts = string.split('.')
 
     # Index of parts to start referencing on, used in the relative case to skip the blanks
@@ -58,17 +64,18 @@ def lookup(string, relative, absolute, print=print):
 
     for part in parts[i:]:
         print(f'Retrieving {part} on {obj}')
+
         if isSectType(obj, 'list'):
             if part.isnumeric():
-                obj = obj[int(part)]
+                part = int(part)
             else:
                 print('References on list sections must be an integer')
-        else:
-            if obj is Null:
-                print('Lookup reference was Null')
-                return Null
 
-            obj = obj[part]
+        elif obj is Null:
+            print('Lookup reference was Null')
+            return Null
+
+        obj = obj.get(part, var=var)
 
     return obj
 
@@ -136,7 +143,7 @@ def interpolate(string, instance, print=print, relativity=True):
         # Lookup a key on the Sect
         else:
             print(f'Key lookup: {match}')
-            value = lookup(match, instance, root, print=print)
+            value = lookup(match, relative=instance, absolute=root, print=print)
 
         # No lookup was found, leave as-is
         # NOTE: This allows Nonetypes to still passthrough

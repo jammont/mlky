@@ -35,15 +35,22 @@ This will nest the mlky subcommands under your project's. Assuming your project
 was named `mypkg`:
 
 ```bash
-mpkg generate -f /some/config.yml -d /some/defs.yml [-s]
-mpkg validate -f /some/config.yml [-i] -d /some/defs.yml [-di]
+mypkg generate -f /some/config.yml -d /some/defs.yml [-s]
+mypkg validate -f /some/config.yml [-i] -d /some/defs.yml [-di]
 ```
 """
 import click
 
-from . import Config
+from ..configs import Config
 
-#%%
+
+# Shared click options
+config   = click.option('-c', '--config', required=True, help='Path to a mlky configuration file')
+patch    = click.option('-p', '--patch', help='Patch order for mlky')
+defs     = click.option('--defs', help='Path to a mlky definitions file')
+override = click.option('-o', '--override', type=(str, str), multiple=True, help='Override config keys')
+
+
 @click.group(invoke_without_command=True, name="config")
 @click.pass_context
 @click.option("-v", "--version", help="Print the current version of MLky", is_flag=True)
@@ -61,53 +68,27 @@ def _cli(ctx, version, path):
         if path:
             click.echo(mlky.__path__[0])
 
-#%%
+
 @_cli.command(name="generate")
 @click.option("-f", "--file",
     help    = "File to write the template to",
     default = "generated.yml"
 )
-@click.option("-d", "--defs",
-    help    = "Definitions file",
-    default = "defs.yml"
-)
-@click.option("-clt", "--convertListTypes",
-    help    = "Enables converting list types to dicts",
-    is_flag = True,
-    default = False
-)
-@click.option("-dmr", "--disableMagicsReplacement",
-    help    = "Disables the default behaviour of replacing magics. Disabling this may result in the generated file containing magic strings.",
-    is_flag = True,
-    default = False
-)
-def generate(file, defs, convertlisttypes, disablemagicsreplacement):
+@defs
+def generate(file, defs):
     """\
     Generates a default config template using the definitions file
     """
-    Config({}, _defs=defs)
+    Config(_defs=defs)
     Config.toYaml(file=file)
     click.echo(f"Wrote template configuration to: {file}")
 
-#%%
+
 @_cli.command(name="validate")
-@click.option('-f', '--file',
-    help         = 'File to validate.',
-    required     = True
-)
-@click.option('-p', '--patch',
-    help         = 'Patch to apply'
-)
-@click.option('-d', '--defs',
-    help         = 'Definitions file for validation.',
-    required     = True,
-    default      = '',
-    show_default = True
-)
-@click.option('-di', '--defs_inherit',
-    help         = 'Inheritance to use for the definitions file.',
-)
-def click_validate(file, inherit, defs, defs_inherit):
+@config
+@patch
+@defs
+def validate(config, patch, defs):
     """\
     Validates a configuration file against a definitions file
     """
@@ -117,32 +98,25 @@ def click_validate(file, inherit, defs, defs_inherit):
     if not errors:
         click.echo(f'No errors were found.')
 
-#%%
+
 @_cli.command(name="print")
-@click.option('-c', '--config',
-    help     = 'Configuration file input',
-    required = True
-)
-@click.option('-p', '--patch',
-    help     = 'Patch to apply'
-)
-@click.option('-d', '--defs',
-    help     = 'Definitions file to populate the config, if available',
-)
+@config
+@patch
+@defs
 @click.option('-t', '--truncate',
     help     = 'Truncates long values for prettier printing',
     type     = int
 )
-def click_print(config, patch, defs, truncate):
+def report(config, patch, defs, truncate):
     """\
     Prints the yaml dump for a configuration with a given patch input
     """
-    click.echo(f'YAML dump for Config(file={config!r}, patch={patch!r}, defs={defs!r})')
-    Config(config, patch, defs)
-    dump = Config.dumpYaml(truncate=truncate)
-    click.echo(dump)
+    click.echo(f'[Config]' + '='*100)
+    Config(config, _patch=patch, _defs=defs)
+    click.echo(Config.toYaml(truncate=truncate))
+    click.echo('-'*109)
 
-#%%
+
 class CLI:
     """
     This class enables access to otherwise private mlky CLI functions. If
@@ -164,5 +138,3 @@ class CLI:
                 # Set the default values
                 for key, value in defaults.items():
                     keys[key].default = value
-
-#%%
