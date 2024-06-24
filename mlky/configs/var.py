@@ -26,6 +26,7 @@ class Var(BaseSect):
     _tmpVal     = Null
     _isDefault  = False
     _multiTyped = False
+    _original   = Null
 
     # Attempt to coerce values (self._data) to the expected dtype
     _coerce = True
@@ -207,6 +208,22 @@ class Var(BaseSect):
         return self._NullOrNone(self._data)
 
 
+    def overrideKey(self, path, value):
+        """
+        Overrides the value of this Var
+
+        Parameters
+        ----------
+        path : str
+            Unused
+        value : any
+            Value to set
+        """
+        self._log(0, 'overrideKey', f'Overriding _data with: {value!r}')
+        self._original = _data
+        self._data = value
+
+
     def toPrim(self, **kwargs):
         """
         Return as a primitive value
@@ -315,10 +332,3 @@ class Var(BaseSect):
                 self._defs |= sub
                 self._dtype = sub.dtype
                 break
-
-
-    def overrideKey(self, path, value):
-        """
-        """
-        self._log(0, 'overrideKey', f'Overriding _data with: {value!r}')
-        self._data = value

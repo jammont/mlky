@@ -558,6 +558,75 @@ class BaseSect:
         return self.__getattr__(key, other, **kwargs)
 
 
+    def overrideKey(self, path, value):
+        """
+        Follows a path to either override an existing key or create the key at the
+        path. A path is dot-notational for dicts and brackets for lists, examples:
+
+        "abc.def.g" maps to:
+        abc:
+          def:
+            g
+
+        "abc[0].def[1].g" maps to:
+        abc:
+          - def:
+            - ... # 0
+            - g   # 1
+
+        Parameters
+        ----------
+        path : str
+            Path to a key to override. If this path does not exist, it will be created
+        value : any
+            The value to set
+        """
+        if isinstance(path, str):
+            # Remove relative pathing
+            if path.startswith('.'):
+                path = path[1:]
+
+            # path = path.split('.')
+            path = re.findall(r'[^.[\s]+', path)
+
+        key = path[0]
+        self._log(0, 'overrideKey', f'Overriding key {key!r}')
+
+        # Match to a list item
+        isList = False
+        if key.endswith(']'):
+            isList = True
+            key = key[:-1]
+
+        if key.isnumeric():
+            key = int(key)
+
+        child = self.get(key, var=True)
+
+        # If the child already exists, keep searching for the correct object to override
+        if isSectType(child):
+            self._log(0, 'overrideKey', 'Key exists, overriding child')
+            child.overrideKey(path[1:], value)
+        else:
+            # Create a list or dict type
+            if len(path) > 1:
+                if isList:
+                    self._log(0, 'overrideKey', 'Creating new child list')
+                    self[key] = []
+                else:
+                    self._log(0, 'overrideKey', 'Creating new child dict')
+                    self[key] = {}
+                self[key].overrideKey(path[1:], value)
+            # Create a Var
+            else:
+                if isList:
+                    self._log(0, 'overrideKey', f'Creating new child as list [{value!r}]')
+                    self[key] = [value]
+                else:
+                    self._log(0, 'overrideKey', f'Creating new child [{value!r}]')
+                    self[key] = value
+
+
     def parsePatch(self, patch):
         """
         Parses a patch string or list into a list for determining patching order.
@@ -882,54 +951,3 @@ class BaseSect:
             return not bool(errors.reduce())
 
         return errors
-
-
-    def overrideKey(self, path, value):
-        """
-        Follows a path to either override an existing key or create the key at the
-        path.
-        """
-        if isinstance(path, str):
-            # Remove relative pathing
-            if path.startswith('.'):
-                path = path[1:]
-
-            # path = path.split('.')
-            path = re.findall(r'[^.[\s]+', path)
-
-        key = path[0]
-        self._log(0, 'overrideKey', f'Overriding key {key!r}')
-
-        # Match to a list item
-        isList = False
-        if key.endswith(']'):
-            isList = True
-            key = key[:-1]
-
-        if key.isnumeric():
-            key = int(key)
-
-        child = self.get(key, var=True)
-
-        # If the child already exists, keep searching for the correct object to override
-        if isSectType(child):
-            self._log(0, 'overrideKey', 'Key exists, overriding child')
-            child.overrideKey(path[1:], value)
-        else:
-            # Create a list or dict type
-            if len(path) > 1:
-                if isList:
-                    self._log(0, 'overrideKey', 'Creating new child list')
-                    self[key] = []
-                else:
-                    self._log(0, 'overrideKey', 'Creating new child dict')
-                    self[key] = {}
-                self[key].overrideKey(path[1:], value)
-            # Create a Var
-            else:
-                if isList:
-                    self._log(0, 'overrideKey', f'Creating new child as list [{value!r}]')
-                    self[key] = [value]
-                else:
-                    self._log(0, 'overrideKey', f'Creating new child [{value!r}]')
-                    self[key] = value
