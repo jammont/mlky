@@ -220,7 +220,7 @@ class Var(BaseSect):
             Value to set
         """
         self._log(0, 'overrideKey', f'Overriding _data with: {value!r}')
-        self._original = _data
+        self._original = self._data
         self._data = value
 
 

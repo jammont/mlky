@@ -45,10 +45,11 @@ from ..configs import Config
 
 
 # Shared click options
-config   = click.option('-c', '--config', required=True, help='Path to a mlky configuration file')
-patch    = click.option('-p', '--patch', help='Patch order for mlky')
-defs     = click.option('--defs', help='Path to a mlky definitions file')
-override = click.option('-o', '--override', type=(str, str), multiple=True, help='Override config keys')
+config    = click.option('-c', '--config', required=True, help='Path to a mlky configuration file')
+patch     = click.option('-p', '--patch', help='Patch order for mlky')
+defs      = click.option('--defs', help='Path to a mlky definitions file')
+override  = click.option('-o', '--override', type=(str, str), multiple=True, help='Override config keys')
+liststyle = click.option('-ls', '--liststyle', type=click.Choice(['short', 'long']), default='short', help='Sets the list style for the toYaml function')
 
 
 @click.group(invoke_without_command=True, name="config")
@@ -75,12 +76,19 @@ def _cli(ctx, version, path):
     default = "generated.yml"
 )
 @defs
-def generate(file, defs):
+@override
+@liststyle
+def generate(file, defs, override, liststyle):
     """\
     Generates a default config template using the definitions file
     """
     Config(_defs=defs)
-    Config.toYaml(file=file)
+
+    for key, value in override:
+        Config.overrideKey(key, value)
+
+    Config.toYaml(file=file, listStyle=liststyle)
+
     click.echo(f"Wrote template configuration to: {file}")
 
 
@@ -88,13 +96,18 @@ def generate(file, defs):
 @config
 @patch
 @defs
-def validate(config, patch, defs):
+@override
+def validate(config, patch, defs, override):
     """\
     Validates a configuration file against a definitions file
     """
     click.echo(f'Validation results for {file}:')
-    config = Config(file, inherit, defs, defs_inherit, _validate=False)
-    errors = config.validate_(_raise=False)
+    Config(file, _patch=patch, _defs=defs)
+
+    for key, value in override:
+        Config.overrideKey(key, value)
+
+    errors = Config.validate()
     if not errors:
         click.echo(f'No errors were found.')
 
@@ -103,17 +116,25 @@ def validate(config, patch, defs):
 @config
 @patch
 @defs
+@override
+@liststyle
 @click.option('-t', '--truncate',
     help     = 'Truncates long values for prettier printing',
     type     = int
 )
-def report(config, patch, defs, truncate):
+def report(config, patch, defs, override, liststyle, truncate):
     """\
     Prints the yaml dump for a configuration with a given patch input
     """
     click.echo(f'[Config]' + '='*100)
+
     Config(config, _patch=patch, _defs=defs)
-    click.echo(Config.toYaml(truncate=truncate))
+
+    for key, value in override:
+        Config.overrideKey(key, value)
+
+    click.echo(Config.toYaml(listStyle=liststyle, truncate=truncate))
+
     click.echo('-'*109)
 
 
