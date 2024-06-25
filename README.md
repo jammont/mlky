@@ -32,7 +32,7 @@ conda install -c jammont mlky
 
 ## Usage
 
-To get started with mlky, import the `Config` class and pass it either a yaml file, yaml string, or a dict:
+To get started with mlky, import the `Config` object and pass it either a yaml file, yaml string, or a dict:
 
 ```python
 >>> from mlky import Config
@@ -40,17 +40,23 @@ To get started with mlky, import the `Config` class and pass it either a yaml fi
 >>> Config
 <Config . (Attrs=[], Sects=[])>
 # Now initialized
->>> Config({'A': {'a': 1, 'b': 2}, 'B': {'a': 0, 'c': 3}})
-<Config . (Attrs=[], Sects=['A', 'B'])>
+>>> Config({'A': {'a': 1, 'b': 2}, 'B': {'a': 0, 'c': 3}, 'C': ['d', 'e']})
+D{'A': D{'a': V=1, 'b': V=2}, 'B': D{'a': V=0, 'c': V=3}, 'C': L[V='d', V='e']}
 ```
 
-The `Config` object supports both dot and dict notation:
+The object uses tags to represent what each part is:
+
+- `D{...}` for `dict` objects
+- `L[...]` for `list` objects
+- `V=...`  for variable objects
+
+These can be accessed by either dot and dict notation:
 
 ```python
 >>> Config.A
-<Sect .A (Attrs=['a', 'b'], Sects=[])>
+D{'a': V=1, 'b': V=2}
 >>> Config['B']
-<Sect .B (Attrs=['a', 'c'], Sects=[])>
+D{'a': V=0, 'c': V=3}
 >>> Config.A.a
 1
 >>> Config['B']['a']
@@ -61,28 +67,35 @@ The `Config` object supports both dot and dict notation:
 3
 ```
 
-It is also a singleton, though that can be overridden with the `local=True` parameter:
+The `Config` object is also a singleton, though copies can be created to create local versions:
 
 ```python
-def set_param(key, value, local=False):
-  config = Config(local=local)
-  config[key] = value
+def set_param(key, value, copy=False):
+    if copy:
+        config = Config.deepCopy()
+    else:
+        config = Config()
 
-def get_param(key, local=False):
-  config = Config(local=local)
-  return config[key]
+    config[key] = value
+
+def get_param(key, copy=False):
+    if copy:
+        config = Config.deepCopy()
+    else:
+        config = Config()
+    return config[key]
 
 >>> set_param('persist', True) # Global
 >>> get_param('persist') # Global
 True
->>> set_param('local', True, local=True)
+>>> set_param('local', True, copy=True)
 >>> get_param('local')
 Null
->>> get_param('persist', local=True) # Copies global instance
+>>> get_param('persist', copy=True) # Copies global instance
 True
 ```
 
-Because it is a singleton, you can also use `Config` directly instead of a variable as well as use the class across the Python instance:
+Because it is a singleton, you can also use `Config` directly instead of a variable as well as use the object across the Python instance:
 
 ```python
 # Script 1
@@ -94,8 +107,8 @@ Config(a=1, b=2) # initialize somewhere
 # Script 2
 from mlky import Config
 
-Config.a == 1
-Config.b == 2
+assert Config.a == 1
+assert Config.b == 2
 ```
 
 Ideally you would want to initialize the `Config` object at the beginning and then leverage the global instance:
