@@ -1,610 +1,331 @@
 """
-Var objects are containers to hold values of a mlky Sect
 """
-import copy
 import logging
-import re
-import yaml
 
-from . import (
-    ErrorsDict,
-    funcs,
-    magic_regex,
-    Null
-)
+from functools import partial
 
-
-Logger = logging.getLogger(__file__)
-Types  = {
-    'bool'   : bool,
-    'bytes'  : bytes,
-    'complex': complex,
-    'dict'   : dict,
-    'float'  : float,
-    'int'    : int,
-    'list'   : list,
-    'set'    : set,
-    'str'    : str,
-    'tuple'  : tuple
-}
-TypeNames = {v: k for k, v in Types.items()}
+from .base        import BaseSect, isSectType
+from .funcs       import ErrorsDict, getRegister
+from .interpolate import interpolate
+from .null        import Null
+from .types       import getType
 
 
-def getType(dtype):
+Logger = logging.getLogger('mlky/var ')
+
+
+class Var(BaseSect):
     """
-    Helper function to convert strings to actual types
+    Container for variable objects
+    Bases from BaseSect but acts differently than other Sect classes
     """
-    # Get actual type, else fallback to a registered function, else the parameter itself
-    if isinstance(dtype, list):
-        return [Types.get(val, funcs.Funcs.get(val, val)) for val in dtype]
-    return Types.get(dtype, funcs.Funcs.get(dtype, dtype))
+    _logger     = Logger
+    _label      = 'V='
+    _data       = Null
+    _dtype      = Null
+    _tmpVal     = Null
+    _isDefault  = False
+    _multiTyped = False
+    _original   = Null
+
+    # Attempt to coerce values (self._data) to the expected dtype
+    _coerce = True
+
+    # Interpolate string values on access .getValue()
+    _interpolate = True
+
+    # Use relative pathing with interpolation; disabling will convert everything to absolute pathing
+    _relativity = True
+
+    # Auto converts backslashes "\" to Null
+    _convertSlashes = True
+
+    # Skips validation if called
+    _skipValidate = False
+
+    # If a value is Null, sets self as missing
+    _nullsEqMissing = False
 
 
-class Var:
-    value    = Null
-    defs     = Null
-    debug    = set()
-    missing  = True
-    required = False
-    strict   = False
-
-    # Special flag to indicate when to skip checks
-    _skip_checks = False
-
-    # .reset() will replace magic strings "${...}", this will disable that
-    _disable_reset_magics = False
-
-    # Will only call replace on magic strings, not any value
-    _replace_only_if_magic = True
-
-    # Recursively call replace so values get populated correctly no matter order of operation
-    _replace_recursively = True
-
-    # Replace backslashes "\" with Null
-    _replace_slash_null = True
-
-    # Assists getValue() to retrieve a temporary value without setting it as .value
-    _tmp_value = Null
-
-    def __init__(self, name, key,
-        value    = Null,
-        default  = Null,
-        example  = Null,
-        dtype    = Null,
-        subtypes = Null,
-        required = False,
-        missing  = False,
-        checks   = [],
-        strict   = False,
-        debug    = -1,
-        sdesc    = '',
-        ldesc    = '',
-        parent   = Null,
-        replace  = True
-    ):
+    def _subinit(self, _data, **kwargs):
         """
-        Variable container object
-
-        Parameters
-        ----------
-        strict: bool, default=False
-            Checks dtype strictly, regardless if required or optional
-        replace: bool, defaults=True
-            Use the default Var.__setattr__ which will call replace() on `value`
-            If `False`, circumvents Var.__setattr__ by using super().__setattr__
         """
-        if isinstance(debug, int):
-            debug = range(0, debug+1)
+        # Overwrite the existing Var with the new one
+        if isinstance(_data, Var):
+            self.__dict__ = _data.__dict__
+            value = value._data
 
-        self.name     = name
-        self.key      = key
-        self.default  = default
-        self.example  = example
-        self.dtype    = dtype
-        self.subtypes = subtypes
-        self.required = required
-        self.missing  = missing
-        self.checks   = checks
-        self.strict   = strict
-        self.debug    = set(debug)
-        self.sdesc    = sdesc
-        self.ldesc    = ldesc
-        self.parent   = parent
-        self.original = value
+        if self._dtype is Null:
+            self._dtype = getType(type(_data))
 
-        if replace and not missing:
-            # This will call replace() then validate()
-            self.value = value
+        self._data = _data
+
+
+    def _addData(self, value):
+        """
+        """
+        self._data      = value
+        self._missing   = False
+        self._isDefault = False
+
+        self._buildDefs()
+
+
+    def _applyDefs(self):
+        """
+        """
+        defs = self._defs
+        if not defs:
+            return
+
+        self._log(0, '_applyDefs', f'Applying defs: {defs}')
+
+        subtypes = defs.get('subtypes')
+        if subtypes:
+            self._multiTyped = True
+            self._log(0, 'updateDefs', f'_multiTyped enabled')
+
+            # Cast the subtypes to dtype objects
+            for sub in subtypes:
+                sub.dtype = getType(sub.dtype)
         else:
-            # No replace(), takes as-is
-            # super().__setattr__('value', value)
-            self.setValue(value, replace=False, validate=False)
+            dtype = getType(defs.get('dtype', 'any'))
+            if dtype != self._dtype:
+                self._dtype = dtype
+                self._log(0, '_applyDefs', f'New dtype: {self._dtype}')
 
-    def __eq__(self, other):
-        data = self.toDict()
-        if isinstance(other, dict):
-            return data == other
-        elif isinstance(other, self.__class__):
-            return data == other.toDict()
-        return False
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new = cls.__new__(cls)
-        memo[id(self)] = new
-        for key, val in self.__dict__.items():
-            self._debug(1, '__deepcopy__', f'Deep copying __dict__[{key!r}] = {val!r}')
-            new.__dict__[key] = copy.deepcopy(val, memo)
-        return new
-
-    def __reduce__(self):
-        return (type(self), (
-            self.name, self.key, self.value,
-            self.default, self.dtype, self.required,
-            self.missing, self.checks
-        ))
-
-    def deepReplace(self, value):
+    def getValue(self):
         """
-        Calls reset on the children of this Var's value if it is a list type
-        """
-        for i, item in enumerate(value):
-            if 'Sect' in str(type(item)):
-                self._debug(2, 'deepReplace', f'Resetting {item}')
-                item.resetVars()
-
-            elif isinstance(item, str):
-                new = self.replace(item)
-                if new is not None:
-                    self._debug(2, 'deepReplace', f'Replacing index [{i}] {item!r} with {new!r}')
-                    value[i] = new
-
-            elif isinstance(item, (list, tuple)):
-                self._debug(2, 'deepReplace', f'Calling deepReplace on child list {item}')
-                self.deepReplace(item)
-
-    def __setattr__(self, key, value, replace=True, validate=True):
-        """
-        """
-        if key == 'value':
-            # Reset this if it was set elsewhere when the Var.value is changed
-            self._skip_checks = False
-
-            # Call replace if enabled
-            if replace:
-                # Lists to Sects disabled, perform a deep replacement
-                if isinstance(value, (list, tuple)):
-                    self.original = copy.deepcopy(value)
-                    self.deepReplace(value)
-                else:
-                    # Always call to see if this value should be replaced
-                    new = self.replace(value)
-                    if new is not None:
-                        self.original = value
-                        value = new
-
-            # Replacement may cause a value to become Null, this is always considered "missing"
-            if value is Null:
-                self.missing = True
-            else:
-                self.missing = False
-
-            # Call validation checks if enabled
-            if validate:
-                # Non-empty dict means errors found
-                errs = self.validate(value).reduce()
-                if errs:
-                    Logger.error(f'Changing the value of this Var({self.name}) to will cause validation to fail. See var.validate() for errors')
-
-        elif key == 'dtype':
-            value = getType(value)
-
-        # Cast subtype dtypes to real types
-        elif key == 'subtypes':
-            for sub in value:
-                if 'dtype' not in sub:
-                    msg = f'Defs keys with multiple types must define the dtype for each explicitly. Missing for {key}[{i}]'
-                    self._log('e', '__setattr__', msg)
-                    raise AttributeError(msg)
-
-                sub['dtype'] = getType(sub['dtype'])
-
-        super().__setattr__(key, value)
-
-    def __repr__(self):
-        return f'<Var({self.key}={self.value!r})>'
-
-    @property
-    def _f(self):
-        """
-        A 'flags' function to standardize internal attribute lookups between
-        Sect and Var objects.
-
-        While Vars just use plain words for attributes such as `Var.checks`,
-        Sects use an underscore followed by a standard 4 letters like
-        `Sect._chks`. This property on both classes will access the same desired
-        attribute:
-            Var.checks == Var._f.checks <=> Sect._f.checks == Sect._chks
-
-        Which is useful when iterating over a list that may contain both Var
-        and Sect objects:
-        ```
-        >>> Config({'a': 1, 'b': {}})
-        >>> for key, item in Config.items(var=True):
-        ...     print(key, type(item), item._f.name)
-        a <class 'mlky.configs.var.Var'> .a
-        b <class 'mlky.configs.sect.Sect'> .b
-        ```
-        One caveat: on Var objects this works fine, but on Sect objects this
-        is read-only due to creating a view of internal attributes rather than
-        be the attribute variables themselves
-        """
-        return self
-
-    @property
-    def _offset(self):
-        """
-        Offset in spaces to denote hierarchical level
-        """
-        name = len(self.name.split('.'))
-        if isinstance(self.key, int):
-            name += 1
-            key = 1
-        else:
-            key = len(self.key.split('.'))
-
-        return '  ' * (name - key)
-
-    def _debug(self, level, func, msg):
-        """
-        Formats debug messages
-        """
-        message = f'{self._offset}<{type(self).__name__}>({self.name}).{func}() {msg}'
-        if level == 'e':
-            Logger.error(message)
-        elif level in self.debug or func in self.debug:
-            Logger.debug(message)
-
-    def _update(self, key, parent):
-        """
-        Updates values of this Var given a new parent Sect
-        """
-        self.debug = parent._dbug
-
-        if key != self.key:
-            self._debug(1, 'update', f'Updating key from {self.key!r} to {key}')
-            self.key = key
-
-        old = self.name
-        new = parent._subkey(key)
-        if new is not Null and new != old:
-            self._debug(1, '_update', f'Updating name from {old!r} to {new}')
-            self.name = new
-
-        self.parent = parent
-
-    def toDict(self):
-        return self.__dict__
-
-    def deepCopy(self, memo=None):
-        return copy.deepcopy(self, memo)
-
-    def checkType(self, value=Null, strict=False):
-        """
-        Checks a given value against the type set for this object.
-
-        Parameters
-        ----------
-        value: any, default=Null
-            Value to test against. If left as default Null, will use the Var.value
-        strict: bool, defaults=False
-            Sets strict for this call only
-        """
-        if value is Null:
-            value = self.getValue()
-
-        if all([
-            not (self.strict or strict), # Strict cases always check dtype
-            not self.required,           # Not required to be set
-            value is Null                # Already a null value, possibly inherently null
-        ]):
-            return True
-
-        return funcs.getRegister('check_dtype')(value, self.dtype)
-
-    def validate(self, value=Null, strict=False, **kwargs):
-        """
-        Validates a value against this variable's checks
-
-        Parameters
-        ----------
-        value: any, defaults=Null
-            Value to validate. If left as default Null, will use the Var.value
-        strict: bool, defaults=False
-            Sets strict for this call only
+        Retrieves the value of this object. This will fallback to a default value if
+        the current value is Null. Otherwise, attempt to interpolate the value and then
+        coerce it into the expected dtype. This is executed each time the Var's value
+        is accessed so that it can dynamically generate the correct value.
 
         Returns
         -------
-        errors: mlky.ErrorsDict or True
-            If all checks pass, returns True, otherwise returns an Errors
-            object. Essentially the same as a dict. Each key is the check name
-            and the value is either True for passing, a string for a single
-            failure, or a list of strings for multiple failures. This is a
-            custom dict that implements the reduce() function that will only
-            return checks that failed by removing any checks wasn't a str or
-            list. This should help filter bad returns from custom check
-            functions as well.
+        self._data : any
+            The internal data value
+        """
+        # Try to rebuild defs every call to stay up to date
+        # self._buildDefs()
+
+        if self._missing and self._data is Null:
+            self._data = self._defs.get('default', Null)
+
+            # Track that this value is the default value
+            self._isDefault = True
+
+        # Apply interpolation to strings
+        if self._interpolate and isinstance(self._data, str):
+            log  = partial(self._log, 1, 'interpolate')
+            data = interpolate(self._data, self, print=log, relativity=self._relativity)
+
+            # The interpolated value was another Sect, replace this Var
+            if isSectType(data, ['dict', 'list']):
+                # print('Interpolated return was a Sect type, replacing self')
+                # self._parent[self._key] = self._data
+                # return self._parent[self._key]
+                self._log(1, 'getValue', 'Interpolated return was a Sect type, ignoring result to avoid recursion')
+                return self._data
+
+            # Interpolation failed, prevent subsequent calls from attempting
+            # if data == self._data:
+            #     print('Interpolated return was the same, disabling interpolation for this Var')
+            #     self._interpolate = False
+            #     self._data = Null
+            #     return self._data
+
+            self._data = data
+
+        # Switch the subtype if it's defined
+        if self._multiTyped:
+            self._switchSubtype(self._data)
+
+        # Attempt to coerce this value to the expected dtype
+        if self._coerce and not self._dtype.istype(self._data):
+            try:
+                original = type(self._data)
+                new = self._dtype.cast(self._data)
+                if new is not self._data:
+                    self._data = new
+                    self._log(1, 'getValue', f'Coerced from type {original} to {type(new)}')
+            except:
+                self._log(1, 'getValue', f'Failed to coerce value from {type(self._data)} to {self._dtype.dtype} with value: {self._data!r}')
+
+        if self._convertSlashes and self._data == '\\':
+            self._data = Null
+            self._log(1, 'getValue', f'Converted backslash to Null')
+
+            if self._nullsEqMissing:
+                self._log(1, 'getValue', f'_nullsEqMissing enabled, setting _missing = True')
+                self._missing = True
+
+                # Call getValue again to retrieve a default value and possibly interpolation
+                return self.getValue()
+
+        return self._NullOrNone(self._data)
+
+
+    def overrideKey(self, path, value):
+        """
+        Overrides the value of this Var
+
+        Parameters
+        ----------
+        path : str
+            Unused
+        value : any
+            Value to set
+        """
+        self._log(0, 'overrideKey', f'Overriding _data with: {value!r}')
+        self._original = self._data
+        self._data = value
+
+
+    def toPrim(self, **kwargs):
+        """
+        Return as a primitive value
+
+        Returns
+        -------
+        self.getValue()
+        """
+        return self.getValue()
+
+
+    def toYaml(self, tags=[], blacklist=False, nulls=True, **kwargs):
+        """
+        Converts this object to YAML
+
+        Parameters
+        ----------
+        tags : list
+            List of tags to include in the output. This acts as a whitelist where all
+            other tags will be excluded
+        blacklist : bool
+            All tags in the `tags` parameter will be blacklisted instead, where tags
+            not in this list will be accepted
+        nulls : bool, default=True
+            Include Vars that return Null. Set False to exclude these
+        """
+        if tags:
+            hasTags = self._hasTags(tags)
+            if blacklist:
+                if hasTags:
+                    return []
+            elif not hasTags:
+                return []
+
+        value = self.getValue()
+
+        if not nulls and value is Null:
+            return []
+
+        if isSectType(self._parent, 'list'):
+            line = f'- {self._dtype.yaml(self.getValue())}'
+
+        elif isSectType(self._parent, 'dict'):
+            line = f'{self._key}: {self._dtype.yaml(self.getValue())}'
+
+        else:
+            self._log('e', 'toYaml', 'Calling toYaml on a Var with no parent is not supported')
+            return []
+
+        flag  = '*' if self._defs.get('required') else ' '
+        dtype = self._dtype.label
+        desc  = self._defs.get('sdesc', '')
+
+        return [[line, flag, dtype, desc]]
+
+
+    def updateChildren(self):
+        """
+        No children, do nothing
+        """
+        pass
+
+
+    def validateObj(self, value=Null, strict=False, checkDefault=False, **kwargs):
+        """
+        Validates this Var per the defs
+
+        Parameters
+        ----------
+        value : any, default=Null
+            The value to validate. If not provided, uses self.getValue()
+        strict : bool, default=False
+            Enables strict mode which will run the checks even when the Var is missing
+        checkDefault : bool, default=False
+            Enables running checks against the default value
+
+        Returns
+        -------
+        errors : ErrorsDict
+            Errors that may have occurred. This dict comes with a `.reduce()` function
+            to simplify the errors
         """
         if value is Null:
             value = self.getValue()
         else:
-            self._tmp_value = value
+            self._tmpVal = value
 
-        # Custom dict, can use e.reduce() to remove e[check]=True
+        self._log(0, 'validate', 'Validating')
         errors = ErrorsDict()
 
-        # Special cases may not want to execute the checks
-        if self._skip_checks:
-            self._debug(0, 'validate', '_skip_checks enabled, returning no errors')
+        if self._skipValidate:
+            self._log(0, 'validate', '_skipValidate enabled, returning early')
             return errors
 
         # Don't run any checks if the key was missing
-        if self.missing and not (self.strict or strict):
-            if self.required:
+        strict = strict or self._defs.get('strict')
+        if self._missing and not strict:
+            if self._defs.get('required'):
                 errors['required'] = 'This key is required to be manually set in the config'
-            self._debug(0, 'validate', f'This Var is missing and not strict')
+            self._log(0, 'validate', f'This Var is missing and not strict')
             return errors
 
-        # Check the type before anything else
-        errors['type'] = self.checkType(value, strict)
+        # Don't run checks if the value is just the default value
+        if not checkDefault and self._isDefault:
+            self._log(0, 'validate', f'Using default value, skipping checks')
+            return errors
 
-        for check in self.checks:
+        if not self._dtype.istype(value):
+            errors['type'] = f'Wrong type: Expected {self._dtype.label!r}, got {type(value)}'
+
+        for check in self._defs.get('checks', []):
             args   = []
             kwargs = {}
-            if isinstance(check, dict):
-                (check, args), = list(check.items())
-                if isinstance(args, dict):
+
+            if isSectType(check, 'dict'):
+                (check, args), = check.items()
+                if isSectType(args, 'dict'):
                     kwargs = args
                     args = []
 
-            self._debug(0, 'validate', f'Running check {check}(args={args}, kwargs={kwargs})')
-            errors[check] = funcs.getRegister(check)(self, *args, **kwargs)
-
-        # Validate child objects if this is a list
-        if isinstance(value, list):
-            for item in value:
-                if hasattr(item, 'validate'):
-                    errors[item._f.name] = item.validate(asbool=False, report=False)
+            self._log(0, 'validate', f'Running check {check}(args={args}, kwargs={kwargs})')
+            errors[check] = getRegister(check)(self, *args, **kwargs)
 
         # Reset at the end
-        self._tmp_value = Null
+        self._tmpVal = Null
 
-        # self._debug(0, 'validate', f'Errors reduced: {errors.reduce()}') # Very spammy, unsure about usefulness
         return errors
 
-    def reset(self):
+
+    def _switchSubtype(self, value):
         """
-        Resets this Var's value to its original. This is primarily useful to
-        reset all Vars to trigger replacements after a Config finishes
-        initialization
-        """
-        value = self.getValue()
-
-        if isinstance(value, list):
-            for item in value:
-                # Sect type
-                if hasattr(item, 'resetVars'):
-                    item.resetVars()
-                elif isinstance(item, Var):
-                    item.reset()
-
-        elif value is not self.original:
-            self._debug(0, 'reset', f'Resetting from {value} to {self.original}')
-            self.value = self.original
-
-        elif isinstance(value, str) and value.startswith('$'):
-            if not self._disable_reset_magics:
-                self._debug(0, 'reset', f'Current value is a magic, resetting to call replacement')
-                self.value = value
-
-    def applyDefinition(self, defs):
-        """
-        Applies values from a definitions object
-        """
-        value = self.getValue()
-        for key, val in defs.items():
-            # This is a list type
-            if key == 'items':
-                # For each item in the list
-                for subval in value:
-                    # If it is a Sect or Var, apply def
-                    if subval is not Null and hasattr(subval, 'applyDefinition'):
-                        name = subval._f.name
-                        self._debug(0, 'applyDefinition', f'Applying definitions to child objects: {name}')
-                        subval.applyDefinition(val.get(name, val))
-
-                # List may have changed, set as the original
-                self.original = self.getValue()
-            else:
-                self._debug(0, 'applyDefinition', f'{key} = {val!r}')
-                setattr(self, key, val)
-
-                if key == 'default' and self.original is Null:
-                    self._debug(0, 'applyDefinition', f'Original is Null and default provided, setting original to default')
-                    setattr(self, 'original', val)
-        else:
-            setattr(self, 'defs', defs)
-
-    def replace(self, value):
-        """
-        mlky replacement magic to support independent Sect instances
-
-        Work in progress
-        """
-        if isinstance(value, str):
-            # Allow "\" values to be passed through to the replace function which will be replaced with Null
-            if self._replace_slash_null and value == '\\':
-                pass
-
-            # Ensure a string has a magic
-            elif self._replace_only_if_magic:
-                if not re.findall(magic_regex, value):
-                    return
-
-        # Call replacement on string types only if option is set
-        elif self._replace_only_if_magic:
-            return
-
-        # Find the root parent
-        parent = self.parent
-        while parent._prnt:
-            parent = parent._prnt
-
-        # TODO: This is broken, just default to the global instance until further research
-        parent = None
-
-        replacement = funcs.getRegister('config.replace')(value, parent, dtype=self.dtype, callResets=self._replace_recursively, _debug=self._debug)
-        if replacement is not value:
-            self._debug(0, 'replace', f'Replacing {value!r} with {replacement!r}')
-            return replacement
-
-    def setValue(self, value, validate=True, replace=True):
-        """
-        Sets the value for the Var. Enables circumventing validate and replace that
-        typically happens in __setattr__.
-        """
-        self.__setattr__('value', value, validate=validate, replace=replace)
-
-    def getValue(self, default=True, example=False):
-        """
-        Returns this Var's value. If it is Null and default is enabled, returns the
-        default value instead.
+        Switches the defs to a different subtype
 
         Parameters
         ----------
-        default: bool, default=True
-            If .value is Null, return .default
-            If this is false, always return .value
-        example: bool, default=False
-            Override and return the example value
+        value : any
+            Retrieves the dtype of this value to match to some subtype
         """
-        if example:
-            return self.example
+        self._log(1, '_switchSubtype', f'Attempting to switch subtype to type {type(value)}')
 
-        # If a user passes in a value to validate(), return that on any call to this function
-        # This helps registered functions retrieve a temporary value instead
-        if self._tmp_value is not Null:
-            return self._tmp_value
-
-        # Otherwise if default is enabled, return that
-        if default and self.value is Null:
-            return self.default
-
-        return self.value
-
-    def getSubType(self, value):
-        """
-        Retrieves the subtype definition if the input value matches to one
-
-        Parameters
-        ----------
-        value: any
-            Value to check
-
-        Returns
-        -------
-        False or dict
-            The defs dict for the subtype if it matches the value type, False otherwise
-        """
-        for sub in self.subtypes:
-            if isinstance(value, sub['dtype']):
-                return sub
-        return False
-
-    def dumpYaml(self, key=None, example=False, nulls=True, **kwargs):
-        """
-        Serialize the object to YAML format.
-
-        Parameters
-        ----------
-        key: str or None, optional
-            The key to use in the YAML output. If None, the name of the object will be used as the key.
-        example: bool, default=False
-            Use example values instead of actual or default values
-        **kwargs: dict
-            Ignore other kwargs that may be passed by a Sect parent but are unused by Var objects
-
-        Returns
-        -------
-        list
-            A list containing the YAML representation of the object
-        """
-        if key is None:
-            key = self.name
-
-        # Cast dtype back to str name
-        dtype = self.dtype
-        if isinstance(dtype, list):
-            dtype = ', '.join([TypeNames.get(item, str(item)) for item in dtype])
-        else:
-            dtype = TypeNames.get(dtype, str(dtype))
-
-        # Change the flag comment if set
-        flag = ' '
-        if self.required:
-            flag = '!'
-        else:
-            parent = self.parent
-            while parent is not Null:
-                if parent._defs.get('required'):
-                    flag = '?'
-                    break
-                parent = parent._prnt
-
-        value = self.getValue(example=example)
-
-        # If this is a Null or a list of Nulls and nulls is turned off, return nothing
-        if not nulls:
-            if isinstance(value, list):
-                if all([v is Null for v in value]):
-                    return []
-            elif value is Null:
-                return []
-
-        lines = []
-        if example:
-            # TODO: Finish implementation
-            # Multiple examples
-            if isinstance(value, list):
-                for val in value:
-                    if isinstance(val, dict):
-                        ...
-            else:
-                line = yaml.dump({key: value})[:-1]
-
-        elif isinstance(value, list):
-            line = f'{key}:'
-            if value:
-                for val in value:
-                    if val is Null:
-                        # Replace Null values with backslash
-                        lines.append(['- \\'])
-                    elif hasattr(val, 'dumpYaml'):
-                        dump = val.dumpYaml('', string=False, nulls=nulls)
-                        dump[0][0] = '- ' + dump[0][0]
-                        lines += dump
-                    else:
-                        lines.append(['- ' + yaml.dump(val).split('\n')[0]])
-            else:
-                line = f'{key}: []'
-        else:
-            if value is Null:
-                value = '\\'
-            line = yaml.dump({key: value})[:-1]
-
-        # Apply spacing offset
-        if lines:
-            for i, child in enumerate(lines):
-                lines[i][0] = '  ' + child[0]
-
-        return [[line, flag, dtype or '', self.sdesc]] + lines
+        for sub in self._defs.subtypes:
+            if sub.dtype.istype(value):
+                self._log(1, '_switchSubtype', f'Matched to {sub}')
+                self._defs |= sub
+                self._dtype = sub.dtype
+                break

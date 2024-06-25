@@ -11,36 +11,72 @@ from mlky import (
 )
 
 
-@pytest.mark.parametrize("name,key,value,dtype,checks,errors", [
-    ('.1', 'one'  , 1, 'None', [{'oneof': [0, 1, 2]}], {}),
-    ('.2', 'two'  , 2, 'any' , [{'oneof': [0, 2, 4]}], {}),
-    ('.3', 'three', 3, int   , [{'oneof': [0, 2, 4]}], {'oneof': 'Invalid option: 3, should be one of: (0, 2, 4)'}),
-    ('.4', 'four' , 4, str   , [{'oneof': [0, 4, 8]}], {'type': "Wrong type: Expected <class 'str'> Got <class 'int'>"})
-])
-def test_Var(name, key, value, dtype, checks, errors):
+def test_flag_coerce():
     """
-    Tests initialization and briefly validation
     """
-    v = Var(name=name, key=key, value=value, dtype=dtype, checks=checks)
+    s = Sect({'a': 1})
+    v = s.get('a', var=True)
+    assert isinstance(v, Var)
+    assert v._coerce == True
 
-    assert str(v)   == f'<Var({key}={value})>', f'Var str() broken, expected "<Var({key}={value})>" got {str(v)}'
-    assert v.name   == name,   f'Bad attribute "name", expected {name} got {v.name}'
-    assert v.key    == key,    f'Bad attribute "key", expected {key} got {v.key}'
-    assert v.value  == value,  f'Bad attribute "value", expected {value} got {v.value}'
-    assert v.dtype  == dtype,  f'Bad attribute "dtype", expected {dtype} got {v.dtype}'
-    assert v.checks == checks, f'Bad attribute "checks", expected {checks} got {v.checks}'
+    s.a = '2'
+    assert s.a == 2
 
-    reduced = v.validate().reduce()
-    assert reduced == errors, f'Bad errors, expected {errors} got {reduced}'
+    s = Sect({'a': 1}, _coerce=False)
+    v = s.get('a', var=True)
+    assert isinstance(v, Var)
+    assert v._coerce == False
+
+    s.a = '2'
+    assert s.a == '2'
 
 
-def test_pickle():
+def test_subtypes():
     """
-    Tests serializability
     """
-    sect = Sect({'a': 1, 'b': {'c': ['z', 'y']}})
+    defs = """\
+    .multi:
+        sdesc: This is a multi-typed variable
+        default: 1
+        subtypes:
+            - dtype: int
+              default: 1
+              checks:
+                - compare:
+                    gt: 0
+            - dtype: str
+              default: '/some/file'
+              checks:
+                - isfile
+    """
+    s = Sect(_defs=defs)
 
-    data = pickle.dumps(sect)
-    load = pickle.loads(data)
+    s.multi = 'abc'
+    assert s.validateObj(asbool=False, report=False) == {'.multi': {'isfile': 'File Not Found: abc'}}, 'Failed to switch subtype to str'
 
-    assert sect == load, 'Loaded pickle data does not match original'
+    s.multi = -1
+    assert s.validateObj(asbool=False, report=False) == {'.multi': {'compare': ['Value must be greater than: 0']}}, 'Failed to switch subtype to int'
+
+
+def test_nullsEqMissing():
+    """
+    """
+    defs = """\
+    .multi:
+        subtypes:
+            - dtype: int
+              default: 1
+            - dtype: str
+              default: 'a'
+    """
+    data = """\
+    multi: \\
+    """
+
+    s = Sect(data, _defs=defs, _nullsEqMissing=True)
+    v = s.get('multi', var=True)
+
+    assert s.multi == 'a', 'Failed to switch subtype and retrieve dtype'
+
+    s.multi = 3
+    assert s.multi == 3, 'Failed to switch subtype'

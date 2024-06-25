@@ -35,15 +35,65 @@ This will nest the mlky subcommands under your project's. Assuming your project
 was named `mypkg`:
 
 ```bash
-mpkg generate -f /some/config.yml -d /some/defs.yml [-s]
-mpkg validate -f /some/config.yml [-i] -d /some/defs.yml [-di]
+mypkg generate -f /some/config.yml -d /some/defs.yml [-s]
+mypkg validate -f /some/config.yml [-i] -d /some/defs.yml [-di]
 ```
 """
 import click
 
-from . import Config
+from ..configs import Config
 
-#%%
+
+def createOption(flags, opts):
+    """
+    Creates a Click option decorator that can be used with or without parameters.
+
+    Parameters
+    ----------
+    flags : tuple
+        A tuple containing the flags for the Click option (e.g., ('--flag', '-f')).
+    opts : dict
+        A dictionary containing the option settings (e.g., {'help': 'Description of the option'}).
+
+    Returns
+    -------
+    function
+        A decorator function that can be used to add the Click option to another function.
+    """
+    def clickOption(*args, **kwargs):
+        def wrap(func):
+            return click.option(*flags, **(opts|kwargs))(func)
+
+        if args and callable(args[0]):
+            return wrap(args[0])
+
+        return wrap
+
+    return clickOption
+
+# Shared click options
+config    = createOption(['-c', '--config'], {
+    'required': True,
+    'help': 'Path to a mlky configuration file'
+})
+patch     = createOption(['-p', '--patch'], {
+    'help': 'Patch order for mlky'
+})
+defs      = createOption(['--defs'], {
+    'help': 'Path to a mlky definitions file'
+})
+override  = createOption(['-o', '--override'], {
+    'type': (str, str),
+    'multiple': True,
+    'help': 'Override config keys'
+})
+liststyle = createOption(['-ls', '--liststyle'], {
+    'type': click.Choice(['short', 'long']),
+    'default': 'short',
+    'help': 'Sets the list style for the toYaml function'
+})
+
+
 @click.group(invoke_without_command=True, name="config")
 @click.pass_context
 @click.option("-v", "--version", help="Print the current version of MLky", is_flag=True)
@@ -61,91 +111,75 @@ def _cli(ctx, version, path):
         if path:
             click.echo(mlky.__path__[0])
 
-#%%
+
 @_cli.command(name="generate")
 @click.option("-f", "--file",
     help    = "File to write the template to",
     default = "generated.yml"
 )
-@click.option("-d", "--defs",
-    help    = "Definitions file",
-    default = "defs.yml"
-)
-@click.option("-clt", "--convertListTypes",
-    help    = "Enables converting list types to dicts",
-    is_flag = True,
-    default = False
-)
-@click.option("-dmr", "--disableMagicsReplacement",
-    help    = "Disables the default behaviour of replacing magics. Disabling this may result in the generated file containing magic strings.",
-    is_flag = True,
-    default = False
-)
-def generate(file, defs, convertlisttypes, disablemagicsreplacement):
+@defs
+@override
+@liststyle
+def generate(file, defs, override, liststyle):
     """\
     Generates a default config template using the definitions file
     """
-    Config._opts.convertListTypes = convertlisttypes
-    Config._opts.Var._disable_reset_magics = disablemagicsreplacement
+    Config(_defs=defs)
 
-    Config(data={}, defs=defs)
-    Config.generateTemplate(file=file)
+    for key, value in override:
+        Config.overrideKey(key, value)
+
+    Config.toYaml(file=file, listStyle=liststyle)
+
     click.echo(f"Wrote template configuration to: {file}")
 
-#%%
+
 @_cli.command(name="validate")
-@click.option('-f', '--file',
-    help         = 'File to validate.',
-    required     = True
-)
-@click.option('-p', '--patch',
-    help         = 'Patch to apply'
-)
-@click.option('-d', '--defs',
-    help         = 'Definitions file for validation.',
-    required     = True,
-    default      = '',
-    show_default = True
-)
-@click.option('-di', '--defs_inherit',
-    help         = 'Inheritance to use for the definitions file.',
-)
-def click_validate(file, inherit, defs, defs_inherit):
+@config
+@patch
+@defs
+@override
+def validate(config, patch, defs, override):
     """\
     Validates a configuration file against a definitions file
     """
     click.echo(f'Validation results for {file}:')
-    config = Config(file, inherit, defs, defs_inherit, _validate=False)
-    errors = config.validate_(_raise=False)
+    Config(file, _patch=patch, _defs=defs)
+
+    for key, value in override:
+        Config.overrideKey(key, value)
+
+    errors = Config.validate()
     if not errors:
         click.echo(f'No errors were found.')
 
-#%%
+
 @_cli.command(name="print")
-@click.option('-c', '--config',
-    help     = 'Configuration file input',
-    required = True
-)
-@click.option('-p', '--patch',
-    help     = 'Patch to apply'
-)
-@click.option('-d', '--defs',
-    help     = 'Definitions file to populate the config, if available',
-)
+@config
+@patch
+@defs
+@override
+@liststyle
 @click.option('-t', '--truncate',
-    help     = 'Truncates long values for prettier printing',
-    type     = int
+    help = 'Truncates long values for prettier printing',
+    type = int
 )
-def click_print(config, patch, defs, truncate):
+def report(config, patch, defs, override, liststyle, truncate):
     """\
     Prints the yaml dump for a configuration with a given patch input
     """
-    click.echo(f'YAML dump for Config(file={config!r}, patch={patch!r}, defs={defs!r})')
-    Config(config, patch, defs)
-    dump = Config.dumpYaml(truncate=truncate)
-    click.echo(dump)
+    click.echo(f'[Config]' + '='*100)
 
-#%%
+    Config(config, _patch=patch, _defs=defs)
+
+    for key, value in override:
+        Config.overrideKey(key, value)
+
+    click.echo(Config.toYaml(listStyle=liststyle, truncate=truncate))
+
+    click.echo('-'*109)
+
+
 class CLI:
     """
     This class enables access to otherwise private mlky CLI functions. If
@@ -167,5 +201,3 @@ class CLI:
                 # Set the default values
                 for key, value in defaults.items():
                     keys[key].default = value
-
-#%%

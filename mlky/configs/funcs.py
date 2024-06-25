@@ -2,16 +2,13 @@
 """
 import logging
 
-from . import Null
+from .null import Null
 
 
-Logger = logging.getLogger(__file__)
+Logger = logging.getLogger('mlky/funcs')
 
 # {key: func}, all registered functions of mlky
 Funcs = {}
-
-# Tracks which Config keys need to update their _f.checks list after initialization
-Checks = {}
 
 
 class ErrorsDict(dict):
@@ -31,6 +28,23 @@ class ErrorsDict(dict):
             elif isinstance(val, (str, list)):
                 reduced[key] = val
         return reduced
+
+
+def reportErrors(errors, offset=''):
+    """
+    Pretty prints an errors dictionary to logging.error
+    """
+    for key, errs in errors.items():
+        if key.startswith('.'):
+            name = key.split('.')[-1]
+            Logger.error(offset + f'.{name}')
+            reportErrors(errs, offset+'  ')
+        else:
+            if isinstance(errs, list):
+                for err in errs:
+                    Logger.error(offset + f'- {key}: {err}')
+            else:
+                Logger.error(offset + f'- {key}: {errs}')
 
 
 def register(key='', name=None, regex=False, **kwargs):
@@ -60,10 +74,6 @@ def register(key='', name=None, regex=False, **kwargs):
 
         if name in Funcs:
             Logger.warning(f'Function is already registered and will be replaced: {name!r}')
-
-        # This check will be assigned to a specific key
-        if key.startswith('.'):
-            Checks.setdefault(key, []).append(name)
 
         # Register the function
         Funcs[name] = protect

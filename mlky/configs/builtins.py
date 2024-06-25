@@ -6,13 +6,8 @@ import os
 import re
 import uuid
 
-from types import FunctionType
-
-from . import (
-    funcs,
-    Null,
-    register
-)
+from .funcs import register
+from .null  import Null
 
 
 @register()
@@ -69,6 +64,7 @@ def cpu_count(*args):
     """
     return os.cpu_count()
 
+
 @register(name='nan')
 def nan(*args):
     """
@@ -80,6 +76,7 @@ def nan(*args):
         NaN
     """
     return float('NaN')
+
 
 @register()
 def oneof(var, *opts, options=[], regex=False):
@@ -215,7 +212,7 @@ def compare(var, lt=None, lte=None, gt=None, gte=None):
 
 
 @register()
-def between(var, a, b, inclusive=False):
+def between(var, lower, upper, inclusive=False):
     """
     Intuitive syntax for `compare` function
 
@@ -223,10 +220,10 @@ def between(var, a, b, inclusive=False):
     ----------
     value: any
         The value to compare
-    a: any
+    lower: any
         The upper bound comparison
-    b: any
-        The lower bound comparison
+    upper: any
+        The upper bound comparison
     inclusive: bool | str, defaults=False
         Boundary inclusivity:
         - False   = Both bounds are exclusive
@@ -244,14 +241,14 @@ def between(var, a, b, inclusive=False):
     """
     kwargs = {}
     if inclusive in ['lower', 'both', True]:
-        kwargs['gte'] = a
+        kwargs['gte'] = lower
     else:
-        kwargs['gt'] = a
+        kwargs['gt'] = lower
 
     if inclusive in ['upper', 'both', True]:
-        kwargs['lte'] = b
+        kwargs['lte'] = upper
     else:
-        kwargs['lt'] = b
+        kwargs['lt'] = upper
 
     return compare(var, **kwargs)
 
@@ -323,7 +320,7 @@ def mutually_exclusive(items):
     return True
 
 
-@register
+@register()
 def if_one_then_all(items):
     """
     If one item is defined then all must be defined
@@ -354,51 +351,3 @@ def if_one_then_all(items):
     if defined and undefined:
         return f'If one is defined, all must be defined: defined={defined}, undefined={undefined}'
     return True
-
-
-# dtypes assigned to these values always pass checks
-Typeless = (Null, 'Null', None, 'None', 'any')
-
-@register()
-def check_dtype(value, dtype):
-    """
-    Checks the type of a given value.
-
-    Parameters
-    ----------
-    value: any
-        The value in question
-    dtype: any
-        The type this value is supposed to be. If type in [Null, 'Null', None,
-        'None', 'any'] then the check is disabled and will return True.
-        Otherwise, uses the Types dictionary to lookup the function to validate
-        with.
-
-    Returns
-    -------
-    True | str | list of str
-        Returns True if this value is the expected type. If it is not, returns
-        either a string or list of strings describing the error.
-    """
-    if dtype in Typeless:
-        return True
-
-    if isinstance(dtype, list):
-        if True not in [check_dtype(value, t) for t in dtype]:
-            return f'Value {value!r} (type: {type(value)}) is not one of types {dtype}'
-        return True
-
-    # Use a custom function to check the type
-    if isinstance(dtype, FunctionType):
-        check = dtype(value)
-
-    # If not a function, this must be a python-registered type
-    elif not isinstance(dtype, type):
-        return f'Unknown type: {dtype!r}'
-
-    else:
-        check = isinstance(value, dtype)
-
-    if check is False:
-        return f'Wrong type: Expected {dtype!r} Got {type(value)}'
-    return check
