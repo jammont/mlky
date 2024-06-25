@@ -921,7 +921,7 @@ class BaseSect:
         raise NotImplementedError(f'Subclass {self.__class__} must define function updateDefs')
 
 
-    def validate(self, report=True, asbool=True, **kwargs):
+    def validateObj(self, report=True, asbool=True, **kwargs):
         """
         Validates a Sect and its children
 
@@ -963,7 +963,7 @@ class BaseSect:
 
         # Validate children
         for child in self._getChildren():
-            errors[child._name] = child.validate(report=False, asbool=False, **kwargs)
+            errors[child._name] = child.validateObj(report=False, asbool=False, **kwargs)
 
         if report:
             reportErrors(errors.reduce())

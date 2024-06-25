@@ -287,7 +287,7 @@ class Var(BaseSect):
         pass
 
 
-    def validate(self, value=Null, strict=False, checkDefault=False, **kwargs):
+    def validateObj(self, value=Null, strict=False, checkDefault=False, **kwargs):
         """
         Validates this Var per the defs
 
