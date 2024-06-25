@@ -212,7 +212,7 @@ def compare(var, lt=None, lte=None, gt=None, gte=None):
 
 
 @register()
-def between(var, a, b, inclusive=False):
+def between(var, lower, upper, inclusive=False):
     """
     Intuitive syntax for `compare` function
 
@@ -220,10 +220,10 @@ def between(var, a, b, inclusive=False):
     ----------
     value: any
         The value to compare
-    a: any
+    lower: any
         The upper bound comparison
-    b: any
-        The lower bound comparison
+    upper: any
+        The upper bound comparison
     inclusive: bool | str, defaults=False
         Boundary inclusivity:
         - False   = Both bounds are exclusive
@@ -241,14 +241,14 @@ def between(var, a, b, inclusive=False):
     """
     kwargs = {}
     if inclusive in ['lower', 'both', True]:
-        kwargs['gte'] = a
+        kwargs['gte'] = lower
     else:
-        kwargs['gt'] = a
+        kwargs['gt'] = lower
 
     if inclusive in ['upper', 'both', True]:
-        kwargs['lte'] = b
+        kwargs['lte'] = upper
     else:
-        kwargs['lt'] = b
+        kwargs['lt'] = upper
 
     return compare(var, **kwargs)
 

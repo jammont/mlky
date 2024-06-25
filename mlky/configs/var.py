@@ -95,47 +95,6 @@ class Var(BaseSect):
                 self._log(0, '_applyDefs', f'New dtype: {self._dtype}')
 
 
-    def _updateDefs(self, parentDefs):
-        """
-        """
-        key  = f'.{self._key}'
-        defs = parentDefs.get(key, {})
-
-        for item in parentDefs.get('items', []):
-            if item['key'] == '*':
-                self._log(0, 'updateDefs', f'Matched * item defs: {item}')
-                defs.update(item)
-            else:
-                self._log(0, 'updateDefs', f"Checking if self has {item['key']} == {item['value']}")
-                if self[item['key']] == item['value']:
-                    self._log(0, 'updateDefs', f'Matched for item defs: {item}')
-                    defs.update(item)
-
-        if not defs:
-            return
-
-        self._log(0, 'updateDefs', f'Updating defs with: {defs}')
-        self.__dict__['_defs'] = defs
-
-        subtypes = defs.get('subtypes')
-        if subtypes:
-            self._multiTyped = True
-            self._log(0, 'updateDefs', f'_multiTyped enabled')
-
-            # Cast the subtypes to dtype objects
-            for sub in subtypes:
-                sub.dtype = getType(sub.dtype)
-        else:
-            # Check if this should be a Dict or List type rather than Var
-            dtype = defs.get('dtype')
-            if dtype is None:
-                raise AttributeError(f'The dtype of every key must be defined in the defs, missing for: {key}')
-
-            # Update to the new dtype
-            self._dtype = getType(defs['dtype'])
-            self._log(0, 'updateDefs', f'New dtype: {self._dtype}')
-
-
     def getValue(self):
         """
         Retrieves the value of this object. This will fallback to a default value if

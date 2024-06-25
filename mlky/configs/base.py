@@ -336,13 +336,13 @@ class BaseSect:
 
         cases = parentDefs.get('match', [])
         for case in cases:
-            for required in ('case', 'key', 'value'):
+            for required in ('case', 'key'):
                 if required not in case:
                     raise AttributeError(f'The `{required}` must be defined for each item in the match list, please check: {case}')
 
             dtype = case['case']
-            key   = case['key']
-            val   = case['value']
+            key   = str(case['key'])
+            val   = case.get('value')
 
             # Match to the case dtype
             if self._dtype == dtype:

@@ -6,21 +6,25 @@ import pathlib
 from .null import Null
 
 
-class Types:
+class Types(type):
     """
-    Data Types base class
+    Data Types metaclass
     """
-    @classmethod
-    def __eq__(self, other):
-        return self.label == other
+    def __eq__(cls, other):
+        # "*" matches to all dtypes
+        if isinstance(other, str) and other == '*':
+            return True
+        return cls.label == other
 
 
-    @classmethod
+    def __hash__(cls):
+        return hash(cls.label)
+
+
     def istype(cls, value):
         return isinstance(value, cls.dtype)
 
 
-    @classmethod
     def cast(cls, value):
         # Auto convert \ to Null
         if value == '\\':
@@ -33,7 +37,6 @@ class Types:
         return cls.dtype(value)
 
 
-    @classmethod
     def yaml(cls, value):
         # Nulls dump as \
         if value is Null:
@@ -42,7 +45,7 @@ class Types:
         return str(value)
 
 
-class Any(Types):
+class Any(metaclass=Types):
     label = 'any'
     dtype = Null
 
@@ -62,39 +65,39 @@ class Any(Types):
         return value
 
 
-class Str(Types):
+class Str(metaclass=Types):
     label = 'str'
     dtype = str
 
     @classmethod
     def yaml(cls, value):
-        value = super().yaml(value)
+        value = Types.yaml(cls, value)
         if value == '':
             return '""'
         return value
 
 
-class Int(Types):
+class Int(metaclass=Types):
     label = 'int'
     dtype = int
 
 
-class Bool(Types):
+class Bool(metaclass=Types):
     label = 'bool'
     dtype = bool
 
 
-class Float(Types):
+class Float(metaclass=Types):
     label = 'float'
     dtype = float
 
 
-class Bytes(Types):
+class Bytes(metaclass=Types):
     label = 'bytes'
     dtype = bytes
 
 
-class Path(Types):
+class Path(metaclass=Types):
     label = 'path'
     dtype = pathlib.Path
 

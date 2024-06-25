@@ -44,12 +44,54 @@ import click
 from ..configs import Config
 
 
+def createOption(flags, opts):
+    """
+    Creates a Click option decorator that can be used with or without parameters.
+
+    Parameters
+    ----------
+    flags : tuple
+        A tuple containing the flags for the Click option (e.g., ('--flag', '-f')).
+    opts : dict
+        A dictionary containing the option settings (e.g., {'help': 'Description of the option'}).
+
+    Returns
+    -------
+    function
+        A decorator function that can be used to add the Click option to another function.
+    """
+    def clickOption(*args, **kwargs):
+        def wrap(func):
+            return click.option(*flags, **(opts|kwargs))(func)
+
+        if args and callable(args[0]):
+            return wrap(args[0])
+
+        return wrap
+
+    return clickOption
+
 # Shared click options
-config    = click.option('-c', '--config', required=True, help='Path to a mlky configuration file')
-patch     = click.option('-p', '--patch', help='Patch order for mlky')
-defs      = click.option('--defs', help='Path to a mlky definitions file')
-override  = click.option('-o', '--override', type=(str, str), multiple=True, help='Override config keys')
-liststyle = click.option('-ls', '--liststyle', type=click.Choice(['short', 'long']), default='short', help='Sets the list style for the toYaml function')
+config    = createOption(['-c', '--config'], {
+    'required': True,
+    'help': 'Path to a mlky configuration file'
+})
+patch     = createOption(['-p', '--patch'], {
+    'help': 'Patch order for mlky'
+})
+defs      = createOption(['--defs'], {
+    'help': 'Path to a mlky definitions file'
+})
+override  = createOption(['-o', '--override'], {
+    'type': (str, str),
+    'multiple': True,
+    'help': 'Override config keys'
+})
+liststyle = createOption(['-ls', '--liststyle'], {
+    'type': click.Choice(['short', 'long']),
+    'default': 'short',
+    'help': 'Sets the list style for the toYaml function'
+})
 
 
 @click.group(invoke_without_command=True, name="config")
@@ -119,8 +161,8 @@ def validate(config, patch, defs, override):
 @override
 @liststyle
 @click.option('-t', '--truncate',
-    help     = 'Truncates long values for prettier printing',
-    type     = int
+    help = 'Truncates long values for prettier printing',
+    type = int
 )
 def report(config, patch, defs, override, liststyle, truncate):
     """\
