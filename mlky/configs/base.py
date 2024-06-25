@@ -910,7 +910,7 @@ class BaseSect:
         Updates child objects with their expected key and this object as the parent.
         Must be implemented by subclass
         """
-        raise raise NotImplementedError(f'Subclass {self.__class__} must define function updateChildren')
+        raise NotImplementedError(f'Subclass {self.__class__} must define function updateChildren')
 
 
     def updateDefs(self, defs):
@@ -918,7 +918,7 @@ class BaseSect:
         Updates the defs for this object by parsing the parent's defs and retrieving
         the appropriate rules. Must be implemented by subclass
         """
-        raise raise NotImplementedError(f'Subclass {self.__class__} must define function updateDefs')
+        raise NotImplementedError(f'Subclass {self.__class__} must define function updateDefs')
 
 
     def validate(self, report=True, asbool=True, **kwargs):
