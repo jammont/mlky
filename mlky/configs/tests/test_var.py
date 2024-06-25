@@ -52,10 +52,10 @@ def test_subtypes():
     s = Sect(_defs=defs)
 
     s.multi = 'abc'
-    assert s.validate(asbool=False, report=False) == {'.multi': {'isfile': 'File Not Found: abc'}}, 'Failed to switch subtype to str'
+    assert s.validateObj(asbool=False, report=False) == {'.multi': {'isfile': 'File Not Found: abc'}}, 'Failed to switch subtype to str'
 
     s.multi = -1
-    assert s.validate(asbool=False, report=False) == {'.multi': {'compare': ['Value must be greater than: 0']}}, 'Failed to switch subtype to int'
+    assert s.validateObj(asbool=False, report=False) == {'.multi': {'compare': ['Value must be greater than: 0']}}, 'Failed to switch subtype to int'
 
 
 def test_nullsEqMissing():
