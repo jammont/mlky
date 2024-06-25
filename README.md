@@ -38,7 +38,7 @@ To get started with mlky, import the `Config` object and pass it either a yaml f
 >>> from mlky import Config
 # Empty initially
 >>> Config
-<Config . (Attrs=[], Sects=[])>
+D{}
 # Now initialized
 >>> Config({'A': {'a': 1, 'b': 2}, 'B': {'a': 0, 'c': 3}, 'C': ['d', 'e']})
 D{'A': D{'a': V=1, 'b': V=2}, 'B': D{'a': V=0, 'c': V=3}, 'C': L[V='d', V='e']}
