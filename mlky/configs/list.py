@@ -167,26 +167,25 @@ class ListSect(BaseSect):
         return data
 
 
-    def toPrim(self, var=False, recursive=True):
+    def toPrim(self, *args, **kwargs):
         """
-        Converts to the Python primitive value: list
-
-        Parameters
-        ----------
-        var: bool, default=False
-            Return Var objects instead of their held values
-        recursive: bool, default=True
-            Recursively convert children to their primitive types as well
-
-        Returns
-        -------
-        list
-            This object as a list
+        Passthrough function for toList()
         """
-        return self.toList(var, recursive)
+        return self.toList(*args, **kwargs)
 
 
     def toYaml(self, *args, listStyle='long', **kwargs):
+        """
+        Converts this object to YAML
+
+        Parameters
+        ----------
+        listStyle : ['short', 'long'], default='long'
+            How to stylize the lists. Long puts each item on its own line.
+            Short will condense the items to a single line between [] brackets.
+            Short only works if all items of the list are Var types (not lists
+            or dicts)
+        """
         lines = super().toYaml(*args, **kwargs)
 
         if listStyle == 'short':
@@ -201,6 +200,7 @@ class ListSect(BaseSect):
 
     def updateChildren(self):
         """
+        Updates child objects with their expected key and this object as the parent
         """
         for key, child in enumerate(self.toList(var=True)):
             child.updateChild(parent=self, key=key)
@@ -208,6 +208,8 @@ class ListSect(BaseSect):
 
     def updateDefs(self):
         """
+        Updates the defs for this object by parsing the parent's defs and retrieving
+        the appropriate rules
         """
         # Root object doesn't have a parent
         if self._parent is None:

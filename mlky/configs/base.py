@@ -173,7 +173,7 @@ class BaseSect:
 
 
     def __iter__(self):
-        raise NotImplementedError(f'Subclass {self.__class__} must define __iter__')
+        raise NotImplementedError(f'Subclass {self.__class__} must define function __iter__')
 
 
     def __len__(self):
@@ -297,7 +297,7 @@ class BaseSect:
 
     def _addData(self, key, value):
         """
-        Adds to self._data. Must be defined by the subclass.
+        Adds to self._data. Must be implemented by the subclass.
 
         Parameters
         ----------
@@ -306,16 +306,14 @@ class BaseSect:
         value : any
             Value to add
         """
-        raise NotImplementedError(f'Subclass {self.__class__} must define _addData')
+        raise NotImplementedError(f'Subclass {self.__class__} must define function _addData')
 
 
     def _applyDefs(self):
-        defs = self._defs
-        if not defs:
-            self._log(0, '_applyDefs', f'No defs found')
-            return
-
-        self._log(0, '_applyDefs', f'Applying defs: {defs}')
+        """
+        Applies the defs to this object. Must be implemented by the subclass
+        """
+        raise NotImplementedError(f'Subclass {self.__class__} must define function _applyDefs')
 
 
     def _buildDefs(self):
@@ -375,7 +373,7 @@ class BaseSect:
         list
             List of Var objects that are children of this
         """
-        raise NotImplementedError
+        raise NotImplementedError(f'Subclass {self.__class__} must define function _getChildren')
 
 
     def _hasTags(self, tags):
@@ -399,16 +397,20 @@ class BaseSect:
 
     def _log(self, level, caller, message):
         """
+        Logger function
+
+        Parameters
+        ----------
+        level : int
+            Log level for the message
+        caller : str
+            Function that the message sources from
+        message : str
+            Message to log
         """
-        # if level == 'e':
-        #     self._logger.error(f'{self._offset}{self._label}({self._name}).{caller}: {message}')
-        # elif level in self._debug or caller in self._debug:
-        #     # self._logger.debug(f'{self._offset}{self._label}({self._name}).{caller}: {message}')
-        #     self._logger.debug(f'{caller:15} | {self._offset}{self._label}({self._name}) {message}')
         if level == 'e':
             self._logger.error(f'{self._label}({self._name}).{caller}: {message}')
         elif level in self._debug or caller in self._debug:
-            # self._logger.debug(f'{self._offset}{self._label}({self._name}).{caller}: {message}')
             self._logger.debug(f'{caller:15} | {self._label}({self._name}) {message}')
 
 
@@ -740,6 +742,8 @@ class BaseSect:
 
     def toYaml(self, string=True, file=None, header=True, tags=[], blacklist=False, nulls=True, comments='inline', space=False, **kwargs):
         """
+        Converts this object to YAML
+
         Parameters
         ----------
         string : bool, default=True
@@ -882,6 +886,14 @@ class BaseSect:
 
     def updateChild(self, parent, key):
         """
+        Updates self as a child of another SectType object
+
+        Parameters
+        ----------
+        parent : SectType
+            The sect object to set as the parent
+        key : str
+            The key that the parent has for this child
         """
         self._log(0, 'updateChildren', f'Updating as key {key!r} with parent {parent._name!r}')
         self._key    = key
@@ -889,15 +901,24 @@ class BaseSect:
 
         self._setName()
         self.setDebug(parent._debug)
-        # self.updateDefs(parent._defs)
 
         self.updateChildren()
 
 
+    def updateChildren(self):
+        """
+        Updates child objects with their expected key and this object as the parent.
+        Must be implemented by subclass
+        """
+        raise raise NotImplementedError(f'Subclass {self.__class__} must define function updateChildren')
+
+
     def updateDefs(self, defs):
         """
+        Updates the defs for this object by parsing the parent's defs and retrieving
+        the appropriate rules. Must be implemented by subclass
         """
-        raise NotImplementedError
+        raise raise NotImplementedError(f'Subclass {self.__class__} must define function updateDefs')
 
 
     def validate(self, report=True, asbool=True, **kwargs):

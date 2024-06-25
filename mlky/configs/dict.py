@@ -56,12 +56,23 @@ class DictSect(BaseSect):
 
 
     def _addData(self, key, value):
+        """
+        Adds a new item to _data
+
+        Parameters
+        ----------
+        key : str
+            Key to set
+        value : any
+            Value to add
+        """
         self._log(1, '_addData', f'Adding key {key!r}: {value}')
         self._data[key] = value
 
 
     def _applyDefs(self):
         """
+        Applies the defs to this object.
         """
         defs = self._defs
         if not defs:
@@ -94,11 +105,27 @@ class DictSect(BaseSect):
 
 
     def _getChildren(self):
+        """
+        Retrieves the children of this object as SectTypes
+        """
         return self.values(var=True)
 
 
     def applyPatch(self, patch, inplace=True):
         """
+        Patches this DictType with another compatible patch object.
+
+        Parameters
+        ----------
+        patch : dict, DictSect
+            Object to patch this object with
+        inplace : bool, default=True
+            Patch this object inplace. If False, creates a deepcopy and patches that
+
+        Returns
+        -------
+        DictSect
+            Patched object
         """
         if not inplace:
             self = self.deepCopy()
@@ -145,6 +172,19 @@ class DictSect(BaseSect):
 
     def toDict(self, var=False, recursive=False):
         """
+        Converts this object to a dict object
+
+        Parameters
+        ----------
+        var : bool, default=False
+            Return Var objects instead of their values
+        recursive : bool, default=False
+            Recursively convert children to their primitive value
+
+        Returns
+        -------
+        data : dict
+            dict form of this object
         """
         data = {}
         for key, child in self._data.items():
@@ -159,11 +199,15 @@ class DictSect(BaseSect):
 
 
     def toPrim(self, *args, **kwargs):
+        """
+        Passthrough function for toDict()
+        """
         return self.toDict(*args, **kwargs)
 
 
     def updateChildren(self):
         """
+        Updates child objects with their expected key and this object as the parent
         """
         for key, child in self.items(var=True):
             self._log(0, 'updateChildren', f'Updating child {key}')
@@ -172,6 +216,8 @@ class DictSect(BaseSect):
 
     def updateDefs(self):
         """
+        Updates the defs for this object by parsing the parent's defs and retrieving
+        the appropriate rules
         """
         # Root object doesn't have a parent
         if self._parent is None:

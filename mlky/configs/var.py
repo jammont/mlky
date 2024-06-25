@@ -146,7 +146,7 @@ class Var(BaseSect):
         Returns
         -------
         self._data : any
-
+            The internal data value
         """
         # Try to rebuild defs every call to stay up to date
         # self._buildDefs()
@@ -227,12 +227,28 @@ class Var(BaseSect):
     def toPrim(self, **kwargs):
         """
         Return as a primitive value
+
+        Returns
+        -------
+        self.getValue()
         """
         return self.getValue()
 
 
     def toYaml(self, tags=[], blacklist=False, nulls=True, **kwargs):
         """
+        Converts this object to YAML
+
+        Parameters
+        ----------
+        tags : list
+            List of tags to include in the output. This acts as a whitelist where all
+            other tags will be excluded
+        blacklist : bool
+            All tags in the `tags` parameter will be blacklisted instead, where tags
+            not in this list will be accepted
+        nulls : bool, default=True
+            Include Vars that return Null. Set False to exclude these
         """
         if tags:
             hasTags = self._hasTags(tags)
@@ -271,8 +287,24 @@ class Var(BaseSect):
         pass
 
 
-    def validate(self, value=Null, strict=False, **kwargs):
+    def validate(self, value=Null, strict=False, checkDefault=False, **kwargs):
         """
+        Validates this Var per the defs
+
+        Parameters
+        ----------
+        value : any, default=Null
+            The value to validate. If not provided, uses self.getValue()
+        strict : bool, default=False
+            Enables strict mode which will run the checks even when the Var is missing
+        checkDefault : bool, default=False
+            Enables running checks against the default value
+
+        Returns
+        -------
+        errors : ErrorsDict
+            Errors that may have occurred. This dict comes with a `.reduce()` function
+            to simplify the errors
         """
         if value is Null:
             value = self.getValue()
@@ -295,7 +327,7 @@ class Var(BaseSect):
             return errors
 
         # Don't run checks if the value is just the default value
-        if self._isDefault:
+        if not checkDefault and self._isDefault:
             self._log(0, 'validate', f'Using default value, skipping checks')
             return errors
 
@@ -323,6 +355,12 @@ class Var(BaseSect):
 
     def _switchSubtype(self, value):
         """
+        Switches the defs to a different subtype
+
+        Parameters
+        ----------
+        value : any
+            Retrieves the dtype of this value to match to some subtype
         """
         self._log(1, '_switchSubtype', f'Attempting to switch subtype to type {type(value)}')
 
