@@ -136,7 +136,16 @@ class DictSect(BaseSect):
         if not self.patchCompatible(patch):
             raise AttributeError('Patching object must be a dict type')
 
-        for key, other in patch.items(var=True):
+        if isSectType(patch, 'dict'):
+            self._log(1, 'applyPatch', f'Patching type: DictSect')
+            iterable = patch.items(var=True)
+        elif self.patchCompatible(patch):
+            self._log(1, 'applyPatch', f'Patching type: dict')
+            iterable = patch.items()
+        else:
+            raise AttributeError('Patching object must be a dict type')
+
+        for key, other in iterable:
             # Existing key
             if key in self:
                 this = self.get(key, var=True)
