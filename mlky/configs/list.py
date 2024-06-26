@@ -36,6 +36,19 @@ class ListSect(BaseSect):
             self._data.append(self._makeObj(key, value))
 
 
+    def __add__(self, other):
+        self = self.deepCopy()
+        for item in other:
+            self.append(item)
+        return self
+
+
+    def __iadd__(self, other):
+        for item in other:
+            self.append(item)
+        return self
+
+
     def __iter__(self):
         return iter(self.toList())
 
