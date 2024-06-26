@@ -1,7 +1,8 @@
 from .cli import (
-    CLI,
+    commands,
     config,
     patch,
     defs,
     override,
+    setDefaults
 )
