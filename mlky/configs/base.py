@@ -411,7 +411,7 @@ class BaseSect:
         if level == 'e':
             self._logger.error(f'{self._label}({self._name}).{caller}: {message}')
         elif level in self._debug or caller in self._debug:
-            self._logger.debug(f'{caller:15} | {self._label}({self._name}) {message}')
+            self._logger.debug(f'{caller:15} | {level} | {self._label}({self._name}) {message}')
 
 
     def _makeObj(self, key, value):
@@ -539,6 +539,14 @@ class BaseSect:
         """
         self._log(0, 'deepCopy', f'Creating deep copy using memo: {memo}')
         return copy.deepcopy(self, memo)
+
+
+    @staticmethod
+    def enableLogging():
+        """
+        Utility method to easily enable logging for a user
+        """
+        logging.basicConfig(level=logging.DEBUG)
 
 
     def get(self, key, other=Null, **kwargs):

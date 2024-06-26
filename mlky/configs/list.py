@@ -136,7 +136,7 @@ class ListSect(BaseSect):
         bool
             True if compatible, False otherwise
         """
-        return isinstance(item, (type(self), list))
+        return isSectType(item, 'list') or isinstance(item, list)
 
 
     def toList(self, var=False, recursive=False):
@@ -155,6 +155,7 @@ class ListSect(BaseSect):
         data: list
             This object as a list
         """
+        self._log(0, 'toList', 'Casting to list')
         data = []
         for child in self._data:
             if not var and isSectType(child, 'var'):
@@ -171,6 +172,7 @@ class ListSect(BaseSect):
         """
         Passthrough function for toList()
         """
+        self._log(0, 'toPrim', 'Casting to primitive')
         return self.toList(*args, **kwargs)
 
 
