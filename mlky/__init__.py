@@ -1,6 +1,6 @@
 """
 """
-__version__ = '2024.06.2'
+__version__ = '4.0.2'
 
 # Instantiate before the CLI
 from mlky.configs import *
