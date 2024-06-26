@@ -136,20 +136,29 @@ class DictSect(BaseSect):
         if not self.patchCompatible(patch):
             raise AttributeError('Patching object must be a dict type')
 
-        for key, other in patch.items():
+        if isSectType(patch, 'dict'):
+            self._log(1, 'applyPatch', f'Patching type: DictSect')
+            iterable = patch.items(var=True)
+        elif self.patchCompatible(patch):
+            self._log(1, 'applyPatch', f'Patching type: dict')
+            iterable = patch.items()
+        else:
+            raise AttributeError('Patching object must be a dict type')
+
+        for key, other in iterable:
             # Existing key
             if key in self:
                 this = self.get(key, var=True)
 
                 # Check if we can patch this with other
                 if this.patchCompatible(other):
-                    self._log(0, 'applyPatch', f'Patching child {key!r} with {other}')
+                    self._log(1, 'applyPatch', f'Patching child {key!r} with {other}')
                     this.applyPatch(other)
                 else:
-                    self._log(0, 'applyPatch', f'Replacing child {key!r} with {other}')
+                    self._log(1, 'applyPatch', f'Replacing child {key!r} with {other}')
                     self[key] = other
             else:
-                self._log(0, 'applyPatch', f'Creating child {key!r} with {other}')
+                self._log(1, 'applyPatch', f'Creating child {key!r} with {other}')
                 self[key] = other
 
         return self
@@ -167,7 +176,7 @@ class DictSect(BaseSect):
         """
         Checks if another object is patch compatible with this object
         """
-        return isinstance(item, (type(self), dict))
+        return isSectType(item, 'dict') or isinstance(item, dict)
 
 
     def toDict(self, var=False, recursive=False):
@@ -186,6 +195,7 @@ class DictSect(BaseSect):
         data : dict
             dict form of this object
         """
+        self._log(0, 'toDict', 'Casting to dict')
         data = {}
         for key, child in self._data.items():
             if not var and isSectType(child, 'var'):
@@ -202,6 +212,7 @@ class DictSect(BaseSect):
         """
         Passthrough function for toDict()
         """
+        self._log(0, 'toPrim', 'Casting to primitive')
         return self.toDict(*args, **kwargs)
 
 
