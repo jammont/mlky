@@ -49,8 +49,11 @@ class BaseSect:
     _dtype    = ''    # Data type for this object
     _override = None  # CLI override data
 
+    # DictSect flags
+    _patch = None
+
     # ListSect flags
-    _patchAppend    = False
+    _patchAppend = False
 
     # Var flags
     _coerce         = True
