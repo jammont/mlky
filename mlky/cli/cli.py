@@ -155,19 +155,23 @@ def validate(config, patch, defs, override, debug):
 @defs
 @override
 @liststyle
+@debug
 @click.option('-t', '--truncate',
     help = 'Truncates long values for prettier printing',
     type = int
 )
-def report(config, patch, defs, override, liststyle, truncate):
+def report(config, patch, defs, override, liststyle, debug, truncate):
     """\
     Prints the yaml dump for a configuration with a given patch input
     """
     click.echo(f'[Config]' + '='*100)
 
-    Config(config, _patch=patch, _defs=defs, _override=override)
+    if debug:
+        Config.enableLogging()
 
-    click.echo(Config.toYaml(listStyle=liststyle, truncate=truncate))
+    Config(config, _patch=patch, _defs=defs, _override=override, _debug=debug)
+
+    click.echo(Config.toYaml(listStyle=liststyle, truncate=truncate, comments=None))
 
     click.echo('-'*109)
 

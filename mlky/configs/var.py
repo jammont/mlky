@@ -118,6 +118,10 @@ class Var(BaseSect):
 
         # Apply interpolation to strings
         if self._interpolate and isinstance(self._data, str):
+            if self._data == '${.'+str(self._key)+'}':
+                self._log('e', 'getValue', f'Interpolated string appears to be recursive with self, resetting value to Null: {self._data}')
+                self._data = '\\'
+
             log  = partial(self._log, 1, 'interpolate')
             data = interpolate(self._data, self, print=log, relativity=self._relativity)
 
