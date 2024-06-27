@@ -95,29 +95,35 @@ class Var(BaseSect):
                 self._log(0, '_applyDefs', f'New dtype: {self._dtype}')
 
 
-    def getValue(self):
+    def getValue(self, interp=True):
         """
         Retrieves the value of this object. This will fallback to a default value if
         the current value is Null. Otherwise, attempt to interpolate the value and then
         coerce it into the expected dtype. This is executed each time the Var's value
         is accessed so that it can dynamically generate the correct value.
 
+        Parameters
+        ----------
+        interp : bool, default=True
+            Allow interpolation of values
+
         Returns
         -------
         self._data : any
             The internal data value
         """
-        # Try to rebuild defs every call to stay up to date
-        # self._buildDefs()
+        # Disable interpolation if either is False
+        interp = interp and self._interpolate
 
         if self._missing and self._data is Null:
             self._data = self._defs.get('default', Null)
 
             # Track that this value is the default value
             self._isDefault = True
+            self._log(1, 'getValue', f'_data set to default value: {self._data}')
 
         # Apply interpolation to strings
-        if self._interpolate and isinstance(self._data, str):
+        if interp and isinstance(self._data, str):
             if self._data == '${.'+str(self._key)+'}':
                 self._log('e', 'getValue', f'Interpolated string appears to be recursive with self, resetting value to Null: {self._data}')
                 self._data = '\\'
@@ -147,13 +153,14 @@ class Var(BaseSect):
             self._switchSubtype(self._data)
 
         # Attempt to coerce this value to the expected dtype
-        if self._coerce and not self._dtype.istype(self._data):
+        if interp and self._coerce and not self._dtype.istype(self._data):
             try:
-                original = type(self._data)
+                data  = self._data
+                dtype = type(data)
                 new = self._dtype.cast(self._data)
-                if new is not self._data:
+                if new is not data:
                     self._data = new
-                    self._log(1, 'getValue', f'Coerced from type {original} to {type(new)}')
+                    self._log(1, 'getValue', f'Coerced {data!r} ({dtype}) to {new!r} ({type(new)})')
             except:
                 self._log(1, 'getValue', f'Failed to coerce value from {type(self._data)} to {self._dtype.dtype} with value: {self._data!r}')
 
@@ -198,16 +205,18 @@ class Var(BaseSect):
         return self.getValue()
 
 
-    def toYaml(self, tags=[], blacklist=False, nulls=True, **kwargs):
+    def toYaml(self, interp=True, tags=[], blacklist=False, nulls=True, **kwargs):
         """
         Converts this object to YAML
 
         Parameters
         ----------
-        tags : list
+        interp : bool, default=True
+            Allow interpolation of values. Setting to False will allow interpolation strings to be printed
+        tags : list, default=[]
             List of tags to include in the output. This acts as a whitelist where all
             other tags will be excluded
-        blacklist : bool
+        blacklist : bool, default=False
             All tags in the `tags` parameter will be blacklisted instead, where tags
             not in this list will be accepted
         nulls : bool, default=True
@@ -221,16 +230,16 @@ class Var(BaseSect):
             elif not hasTags:
                 return []
 
-        value = self.getValue()
+        value = self.getValue(interp=interp)
 
         if not nulls and value is Null:
             return []
 
         if isSectType(self._parent, 'list'):
-            line = f'- {self._dtype.yaml(self.getValue())}'
+            line = f'- {self._dtype.yaml(value)}'
 
         elif isSectType(self._parent, 'dict'):
-            line = f'{self._key}: {self._dtype.yaml(self.getValue())}'
+            line = f'{self._key}: {self._dtype.yaml(value)}'
 
         else:
             self._log('e', 'toYaml', 'Calling toYaml on a Var with no parent is not supported')

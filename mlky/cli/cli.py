@@ -96,16 +96,16 @@ debug = createOption(['--debug'], {
 @click.option("-p", "--path", help="Print the installation path of MLky", is_flag=True)
 def commands(ctx, version, path):
     """\
-    MLky configuration commands
+    mlky configuration commands
     """
     import mlky
 
     if ctx.invoked_subcommand is None:
         if version:
-            click.echo(mlky.__version__)
+            click.echo(f'mlky-v{mlky.__version__}')
 
         if path:
-            click.echo(mlky.__path__[0])
+            click.echo(f'mlky installation: {mlky.__path__[0]}')
 
 
 @commands.command(name="generate")

@@ -784,6 +784,10 @@ class BaseSect:
                     Short will condense the items to a single line between [] brackets.
                     Short only works if all items of the list are Var types (not lists
                     or dicts)
+            Var:
+                interp : bool, default=True
+                    Allow interpolation of values. Setting to False will allow
+                    interpolation strings to be printed
         """
         # Determine if to convert this obj to YAML depending on the tags
         if tags:
