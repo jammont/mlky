@@ -84,6 +84,10 @@ liststyle = createOption(['-ls', '--liststyle'], {
     'default': 'short',
     'help': 'Sets the list style for the toYaml function'
 })
+debug = createOption(['--debug'], {
+    'type': int,
+    'help': 'Sets the mlky debug flag'
+})
 
 
 @click.group(invoke_without_command=True, name="config")
@@ -128,12 +132,17 @@ def generate(file, defs, override, liststyle):
 @patch
 @defs
 @override
-def validate(config, patch, defs, override):
+@debug
+def validate(config, patch, defs, override, debug):
     """\
     Validates a configuration file against a definitions file
     """
-    click.echo(f'Validation results for {file}:')
-    Config(file, _patch=patch, _defs=defs, _override=override)
+    click.echo(f'Validation results for {config}:')
+
+    if debug:
+        Config.enableLogging()
+
+    Config(config, _patch=patch, _defs=defs, _override=override, _debug=debug)
 
     errors = Config.validateObj()
     if not errors:
