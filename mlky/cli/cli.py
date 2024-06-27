@@ -144,8 +144,8 @@ def validate(config, patch, defs, override, debug):
 
     Config(config, _patch=patch, _defs=defs, _override=override, _debug=debug)
 
-    errors = Config.validateObj()
-    if not errors:
+    valid = Config.validateObj()
+    if valid:
         click.echo(f'No errors were found.')
 
 
