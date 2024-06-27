@@ -44,7 +44,7 @@ class Var(BaseSect):
     _skipValidate = False
 
     # If a value is Null, sets self as missing
-    _nullsEqMissing = False
+    _nullsIsMissing = True
 
 
     def _subinit(self, _data, **kwargs):
@@ -118,6 +118,10 @@ class Var(BaseSect):
 
         # Apply interpolation to strings
         if self._interpolate and isinstance(self._data, str):
+            if self._data == '${.'+str(self._key)+'}':
+                self._log('e', 'getValue', f'Interpolated string appears to be recursive with self, resetting value to Null: {self._data}')
+                self._data = '\\'
+
             log  = partial(self._log, 1, 'interpolate')
             data = interpolate(self._data, self, print=log, relativity=self._relativity)
 
@@ -157,8 +161,8 @@ class Var(BaseSect):
             self._data = Null
             self._log(1, 'getValue', f'Converted backslash to Null')
 
-            if self._nullsEqMissing:
-                self._log(1, 'getValue', f'_nullsEqMissing enabled, setting _missing = True')
+            if self._nullsIsMissing:
+                self._log(1, 'getValue', f'_nullsIsMissing enabled, setting _missing = True')
                 self._missing = True
 
                 # Call getValue again to retrieve a default value and possibly interpolation

@@ -86,6 +86,17 @@ class Bool(metaclass=Types):
     label = 'bool'
     dtype = bool
 
+    @classmethod
+    def cast(cls, value):
+        if value is Null:
+            return '\\'
+
+        if isinstance(value, str):
+            if value.lower() == 'false':
+                value = False
+
+        return cls.dtype(value)
+
 
 class Float(metaclass=Types):
     label = 'float'
