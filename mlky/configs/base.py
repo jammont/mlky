@@ -803,12 +803,14 @@ class BaseSect:
 
         # Convert self to YAML
         offset = 2
+        desc   = ''
         if isSectType(self._parent, 'list'):
             line = '- '
         elif isSectType(self._parent, 'dict'):
             line = f'{self._key}:'
         elif header:
             line = 'generated:'
+            desc = 'Generated via mlky toYaml'
         else:
             line = ''
             offset = 0
@@ -819,7 +821,7 @@ class BaseSect:
 
         flag  = '*' if defs.get('required') else ' '
         dtype = self._dtype
-        sdesc = defs.get('sdesc', '')
+        sdesc = defs.get('sdesc', desc)
         if line:
             line = [line, flag, dtype, sdesc]
 

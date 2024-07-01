@@ -1,6 +1,8 @@
 """
 The Null class of mlky.
 """
+import dis
+import inspect
 import logging
 
 from datetime import datetime as dtt
@@ -17,13 +19,14 @@ def NullErrors(msg, warn):
     """
     now = dtt.now()
 
-    if (now - NullErrors.now).seconds < 1:
+    elapse = (now - NullErrors.now).total_seconds()
+    if elapse < 1:
         NullErrors.err += 1
     else:
         NullErrors.err = 0
 
-        if warn:
-            Logger.warning(msg)
+    if warn and elapse < .1:
+        Logger.warning(msg)
 
     NullErrors.now = now
 
@@ -32,6 +35,65 @@ def NullErrors(msg, warn):
 
 NullErrors.now = dtt.now()
 NullErrors.err = 0
+
+
+def traceNull(frame):
+    """
+    Traces the source of the Null object in a given frame. Designed to only detect
+    calls on Nulls and not all Null objects.
+
+    Returns
+    -------
+    str or None
+        If the source Null can be identified, returns the string, otherwise None
+    """
+    paths = []
+    path  = ''
+    obj   = None
+    for instr in dis.Bytecode(frame.f_code):
+        if instr.opname == 'LOAD_NAME':
+            path = instr.argval
+            obj = frame.f_locals.get(path)
+
+        elif instr.opname in ('LOAD_ATTR', 'LOAD_METHOD'):
+            if obj is not Null:
+                path += f'.{instr.argval}'
+            obj = obj[instr.argval]
+
+        elif instr.opname == 'CALL_METHOD' and obj is Null:
+            paths.append(path)
+
+        else:
+            obj = None
+
+    return paths
+
+
+def getContext():
+    """
+    Retrieves the last frame context for debugging
+
+    Returns
+    -------
+    str
+        Formatted context string
+    """
+    # Caller frame is two frames back
+    frame = inspect.currentframe().f_back.f_back
+    info  = inspect.getframeinfo(frame)
+    trace = traceNull(frame)
+
+    context = f'Context:\n  File "{info.filename}", line {info.lineno}, in {info.function}\n    {info.code_context[0].strip()}'
+    if trace:
+        paths = trace[0]
+        if len(trace) > 1:
+            pad   = '\n    - '
+            paths = pad.join(trace)
+            paths = pad + paths
+
+        context += f'\n    Identified as Null: {paths}'
+
+    return context
 
 
 class NullType(type):
@@ -50,7 +112,9 @@ class NullType(type):
     _warn = True
 
     def __call__(cls, *args, **kwargs):
-        NullErrors('Null received a call like a function, was this intended?', cls._warn)
+        context = getContext()
+
+        NullErrors(f'Null received a call like a function, was this intended? {context}', cls._warn)
 
         return cls
 
