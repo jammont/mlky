@@ -64,29 +64,39 @@ def createOption(flags, opts):
     return clickOption
 
 # Shared click options
-config    = createOption(['-c', '--config'], {
+config = createOption(['-c', '--config'], {
     'required': True,
     'help': 'Path to a mlky configuration file'
 })
-patch     = createOption(['-p', '--patch'], {
+
+patch = createOption(['-p', '--patch'], {
     'help': 'Patch order for mlky'
 })
-defs      = createOption(['--defs'], {
+
+defs = createOption(['--defs'], {
     'help': 'Path to a mlky definitions file'
 })
-override  = createOption(['-o', '--override'], {
+
+override = createOption(['-o', '--override'], {
     'type': (str, str),
     'multiple': True,
     'help': 'Override config keys'
 })
+
 liststyle = createOption(['-ls', '--liststyle'], {
     'type': click.Choice(['short', 'long']),
     'default': 'short',
     'help': 'Sets the list style for the toYaml function'
 })
+
 debug = createOption(['--debug'], {
     'type': int,
     'help': 'Sets the mlky debug flag'
+})
+
+nointerp = createOption(['-ni', '--noInterp'], {
+    'is_flag': True,
+    'help': 'Disables interpolation'
 })
 
 
@@ -116,13 +126,14 @@ def commands(ctx, version, path):
 @defs
 @override
 @liststyle
-def generate(file, defs, override, liststyle):
+@nointerp
+def generate(file, defs, override, liststyle, nointerp):
     """\
     Generates a default config template using the definitions file
     """
     Config(_defs=defs, _override=override)
 
-    Config.toYaml(file=file, listStyle=liststyle)
+    Config.toYaml(file=file, listStyle=liststyle, interp=not nointerp)
 
     click.echo(f"Wrote template configuration to: {file}")
 
