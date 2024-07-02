@@ -25,7 +25,7 @@ def NullErrors(msg, warn):
     else:
         NullErrors.err = 0
 
-    if warn and elapse < .1:
+    if warn and elapse > .1:
         Logger.warning(msg)
 
     NullErrors.now = now
@@ -112,7 +112,10 @@ class NullType(type):
     _warn = True
 
     def __call__(cls, *args, **kwargs):
-        context = getContext()
+        try:
+            context = getContext()
+        except:
+            context = ''
 
         NullErrors(f'Null received a call like a function, was this intended? {context}', cls._warn)
 
