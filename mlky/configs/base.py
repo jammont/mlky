@@ -49,8 +49,11 @@ class BaseSect:
     _dtype    = ''    # Data type for this object
     _override = None  # CLI override data
 
+    # DictSect flags
+    _patch = None
+
     # ListSect flags
-    _patchAppend    = False
+    _patchAppend = False
 
     # Var flags
     _coerce         = True
@@ -784,6 +787,10 @@ class BaseSect:
                     Short will condense the items to a single line between [] brackets.
                     Short only works if all items of the list are Var types (not lists
                     or dicts)
+            Var:
+                interp : bool, default=True
+                    Allow interpolation of values. Setting to False will allow
+                    interpolation strings to be printed
         """
         # Determine if to convert this obj to YAML depending on the tags
         if tags:
@@ -796,12 +803,14 @@ class BaseSect:
 
         # Convert self to YAML
         offset = 2
+        desc   = ''
         if isSectType(self._parent, 'list'):
             line = '- '
         elif isSectType(self._parent, 'dict'):
             line = f'{self._key}:'
         elif header:
             line = 'generated:'
+            desc = 'Generated via mlky toYaml'
         else:
             line = ''
             offset = 0
@@ -812,7 +821,7 @@ class BaseSect:
 
         flag  = '*' if defs.get('required') else ' '
         dtype = self._dtype
-        sdesc = defs.get('sdesc', '')
+        sdesc = defs.get('sdesc', desc)
         if line:
             line = [line, flag, dtype, sdesc]
 

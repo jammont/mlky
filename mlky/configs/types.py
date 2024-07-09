@@ -88,9 +88,6 @@ class Bool(metaclass=Types):
 
     @classmethod
     def cast(cls, value):
-        if value is Null:
-            return '\\'
-
         if isinstance(value, str):
             if value.lower() == 'false':
                 value = False
@@ -115,8 +112,8 @@ class Path(metaclass=Types):
     @classmethod
     def cast(cls, value):
         if value is Null:
-            return '\\'
-
+            return value
+        
         return cls.dtype(str(value))
 
 

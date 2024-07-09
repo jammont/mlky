@@ -1,36 +1,3 @@
-"""
-The main CLI for mlky. Presently support the following commands:
-
-```bash
-mlky generate -f /some/config.yml -d /some/defs.yml [-s]
-mlky validate -f /some/config.yml [-i] -d /some/defs.yml [-di]
-```
-
-This CLI can be nested under other Click CLIs via:
-
-```python
-# This is your project's CLI (for example)
-@click.group(name='mypkg')
-def cli():
-    ...
-
-# Import mlky, set some defaults, and add the mlky commands to your cli
-import mlky
-
-defs = '/some/defs.yml'
-mlky.cli.setDefaults(defs=defs)
-
-cli.add_command(mlky.cli.commands)
-```
-
-This will nest the mlky subcommands under your project's. Assuming your project
-was named `mypkg`:
-
-```bash
-mypkg generate -f /some/config.yml -d /some/defs.yml
-mypkg validate -c /some/config.yml -d /some/defs.yml
-```
-"""
 import click
 
 from ..configs import Config
@@ -64,29 +31,39 @@ def createOption(flags, opts):
     return clickOption
 
 # Shared click options
-config    = createOption(['-c', '--config'], {
+config = createOption(['-c', '--config'], {
     'required': True,
     'help': 'Path to a mlky configuration file'
 })
-patch     = createOption(['-p', '--patch'], {
+
+patch = createOption(['-p', '--patch'], {
     'help': 'Patch order for mlky'
 })
-defs      = createOption(['--defs'], {
+
+defs = createOption(['--defs'], {
     'help': 'Path to a mlky definitions file'
 })
-override  = createOption(['-o', '--override'], {
+
+override = createOption(['-o', '--override'], {
     'type': (str, str),
     'multiple': True,
     'help': 'Override config keys'
 })
+
 liststyle = createOption(['-ls', '--liststyle'], {
     'type': click.Choice(['short', 'long']),
     'default': 'short',
     'help': 'Sets the list style for the toYaml function'
 })
+
 debug = createOption(['--debug'], {
     'type': int,
     'help': 'Sets the mlky debug flag'
+})
+
+nointerp = createOption(['-ni', '--nointerp'], {
+    'is_flag': True,
+    'help': 'Disables interpolation'
 })
 
 
@@ -96,16 +73,16 @@ debug = createOption(['--debug'], {
 @click.option("-p", "--path", help="Print the installation path of MLky", is_flag=True)
 def commands(ctx, version, path):
     """\
-    MLky configuration commands
+    mlky configuration commands
     """
     import mlky
 
     if ctx.invoked_subcommand is None:
         if version:
-            click.echo(mlky.__version__)
+            click.echo(f'mlky-v{mlky.__version__}')
 
         if path:
-            click.echo(mlky.__path__[0])
+            click.echo(f'mlky installation: {mlky.__path__[0]}')
 
 
 @commands.command(name="generate")
@@ -116,15 +93,19 @@ def commands(ctx, version, path):
 @defs
 @override
 @liststyle
-def generate(file, defs, override, liststyle):
+@nointerp
+def generate(file, defs, override, liststyle, nointerp):
     """\
-    Generates a default config template using the definitions file
+    Generates a default config template using a definitions file
     """
-    Config(_defs=defs, _override=override)
+    if defs is None:
+        click.echo('No defs has been provided, a config cannot be generated')
+    else:
+        Config(_defs=defs, _override=override)
 
-    Config.toYaml(file=file, listStyle=liststyle)
+        Config.toYaml(file=file, listStyle=liststyle, interp=not nointerp)
 
-    click.echo(f"Wrote template configuration to: {file}")
+        click.echo(f"Wrote template configuration to: {file}")
 
 
 @commands.command(name="validate")
@@ -137,16 +118,19 @@ def validate(config, patch, defs, override, debug):
     """\
     Validates a configuration file against a definitions file
     """
-    click.echo(f'Validation results for {config}:')
+    if defs is None:
+        click.echo('No defs has been provided, the config cannot be validated')
+    else:
+        click.echo(f'Validation results for {config}:')
 
-    if debug:
-        Config.enableLogging()
+        if debug:
+            Config.enableLogging()
 
-    Config(config, _patch=patch, _defs=defs, _override=override, _debug=debug)
+        Config(config, _patch=patch, _defs=defs, _override=override, _debug=debug)
 
-    valid = Config.validateObj()
-    if valid:
-        click.echo(f'No errors were found.')
+        valid = Config.validateObj()
+        if valid:
+            click.echo(f'No errors were found.')
 
 
 @commands.command(name="print")
