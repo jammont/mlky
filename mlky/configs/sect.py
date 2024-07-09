@@ -3,13 +3,21 @@
 import logging
 import os
 
-from glob import glob
+from glob    import glob
+from pathlib import Path
 
 import yaml
 
 from .dict import DictSect
 from .list import ListSect
 from .var  import Var
+
+# Allows custom types to override the defaults for the functions
+types = {
+    'dict': DictSect,
+    'list': ListSect,
+    'var': Var
+}
 
 
 Logger = logging.getLogger('mlky/sect')
@@ -74,11 +82,11 @@ def Switch(key, val, parent, **kwargs):
     Utility function for Sect subclasses to switch input data to the proper object
     container
     """
-    obj = Var
-    if isinstance(val, (dict, DictSect)):
-        obj = DictSect
-    elif isinstance(val, (list, ListSect)):
-        obj = ListSect
+    obj = types['var']
+    if isinstance(val, (dict, types['dict'])):
+        obj = types['dict']
+    elif isinstance(val, (list, types['list'])):
+        obj = types['list']
 
     return obj(key=key, _data=val, parent=parent, **kwargs)
 
@@ -101,24 +109,24 @@ def Sect(*args, **kwargs):
     if len(args) == 1:
         [data] = args
 
-        if isinstance(data, str):
-            data = load_from_str(data)
+        if isinstance(data, (str, Path)):
+            data = load_from_str(str(data))
 
-        if isinstance(data, (dict, DictSect)):
-            return DictSect(_data=data, **kwargs)
+        if isinstance(data, (dict, types['dict'])):
+            return types['dict'](_data=data, **kwargs)
 
-        elif isinstance(data, (list, ListSect)):
-            return ListSect(_data=data, **kwargs)
+        elif isinstance(data, (list, types['list'])):
+            return types['list'](_data=data, **kwargs)
 
         else:
-            return Var(data, **kwargs)
+            return types['var'](data, **kwargs)
 
     elif args:
-        return ListSect(_data=args, **kwargs)
+        return types['list'](_data=args, **kwargs)
 
     # Default to a DictSect even if no kwargs
     else:
-        return DictSect(_data=kwargs, **kwargs)
+        return types['dict'](_data=kwargs, **kwargs)
 
     # else:
     #     raise AttributeError('*args or **kwargs must be defined, see docs for how to use this function')

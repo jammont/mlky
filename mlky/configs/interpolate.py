@@ -123,7 +123,7 @@ def interpolate(string, instance, print=print, relativity=True):
     matches = re.findall(MAGIC, string)
     for match in set(matches):
         # Reconstruct the matched substring
-        sub = '\${'+match+'}'
+        sub = '${'+match+'}'
 
         # Environment variable lookup case
         if match.startswith('$'):
@@ -152,7 +152,7 @@ def interpolate(string, instance, print=print, relativity=True):
 
         # Entire string replaced by this value
         # [1:] to skip the added \
-        if sub[1:] == string:
+        if sub == string:
             print('Returning single-value lookup')
             return value
 
@@ -166,10 +166,11 @@ def interpolate(string, instance, print=print, relativity=True):
         print(f'Replacing {match!r} with {value!r}')
 
         # Handle backslash edgecase causing issues with re.sub
-        if value == '\\':
-            value = r'\\'
+        # if value == '\\':
+        #     value = r'\\'
 
         # Otherwise replace in place
-        string = re.sub(sub, value, string)
+        # string = re.sub(sub, value, string)
+        string = string.replace(sub, value)
 
     return string

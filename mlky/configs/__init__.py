@@ -1,5 +1,7 @@
 """
-Order of operations matter due to dependencies
+The `configs` module contains the core of mlky. Most notably, the `Config` object is
+created on loading the mlky package which is the primary entry point to getting
+started. See the [Getting Started](../../../usage.md) guide for more information.
 """
 from .null import (
     Null,
