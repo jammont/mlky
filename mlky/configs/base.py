@@ -19,6 +19,14 @@ SectTypes = dict(
 def isSectType(item, kind=None):
     """
     Utility to checks if a given item is a Sect type object
+
+    Parameters
+    ----------
+    item : object, list
+        Object to test, or list of objects
+    kind : str, default=None
+        Type of mlky object to test for, ie: ["dict", "list", "var"]
+        None will check if the object is of any mlky type
     """
     if kind is None:
         kind = list(SectTypes)
@@ -61,6 +69,9 @@ class BaseSect:
     _relativity     = True
     _convertSlashes = True
     _nullsEqMissing = False
+
+    # Utilities
+    isSectType = staticmethod(isSectType)
 
 
     def __init__(self, _data, key='', parent=None, **kwargs):
@@ -843,7 +854,7 @@ class BaseSect:
             child[0] = ' '*offset + child[0]
 
         # No children were provided, set as an empty object
-        if not lines:
+        if not lines and line:
             line[0] += f' {self._data}'
 
         # Insert this line before the children after formatting

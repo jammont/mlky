@@ -22,10 +22,10 @@ To get started with mlky, import the `Config` object and pass it either a yaml f
 
 ```python
 >>> from mlky import Config
-# Empty initially
+>>> # Empty initially
 >>> Config
 D{}
-# Now initialized
+>>> # Now initialized
 >>> Config({'A': {'a': 1, 'b': 2}, 'B': {'a': 0, 'c': 3}, 'C': ['d', 'e']})
 D{'A': D{'a': V=1, 'b': V=2}, 'B': D{'a': V=0, 'c': V=3}, 'C': L[V='d', V='e']}
 ```
@@ -153,7 +153,7 @@ if __name__ == '__main__':
     print('Error: No input provided!')
 ```
 
-Command: `python script.py -c /some/config.yml -p sect1<-sect2`
+Command: `python script.py -c /some/config.yml -p "sect1<-sect2"`
 
 Calling the script with the above command will step through:
 
