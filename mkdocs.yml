@@ -5,16 +5,17 @@ docs_dir: docs/
 theme:
   name: readthedocs
 plugins:
-  - search
-  - mkdocstrings:
-      default_handler: python
-      handlers:
-        python:
-          options:
-            docstring_style: numpy
-  - mkapi
+  - search:
+  - mkapi:
+  # - mkdocstrings:
+  #     default_handler: python
+  #     handlers:
+  #       python:
+  #         options:
+  #           docstring_style: numpy
 
 nav:
   - Home: index.md
   - Getting Started: usage.md
+  # - Definitions: defs.md
   - API: $api/mlky.***
