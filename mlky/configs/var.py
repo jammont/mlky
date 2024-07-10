@@ -164,16 +164,16 @@ class Var(BaseSect):
             except:
                 self._log(1, 'getValue', f'Failed to coerce value from {type(self._data)} to {self._dtype.dtype} with value: {self._data!r}')
 
-        if self._convertSlashes and self._data == '\\':
+        if isinstance(self._data, str) and self._convertSlashes and self._data == '\\':
             self._data = Null
             self._log(1, 'getValue', f'Converted backslash to Null')
 
-            if self._nullsIsMissing:
-                self._log(1, 'getValue', f'_nullsIsMissing enabled, setting _missing = True')
-                self._missing = True
+        if self._data is Null and self._nullsIsMissing and not self._missing:
+            self._log(1, 'getValue', f'_nullsIsMissing enabled, setting _missing = True')
+            self._missing = True
 
-                # Call getValue again to retrieve a default value and possibly interpolation
-                return self.getValue()
+            # Call getValue again to retrieve a default value and possibly interpolation
+            return self.getValue()
 
         return self._NullOrNone(self._data)
 
