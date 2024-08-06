@@ -131,6 +131,8 @@ class ListSect(BaseSect):
 
         self._data = patch._data
 
+        self.updateChildren()
+
         self._log(0, 'applyPatch', f'Patching with: {patch}')
         return self
 
