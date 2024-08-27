@@ -172,6 +172,12 @@ class DictSect(BaseSect):
         return self.toDict(var).items()
 
 
+    def pop(self, key):
+        item = self[key]
+        del self[key]
+        return item
+
+
     def patchCompatible(self, item):
         """
         Checks if another object is patch compatible with this object

@@ -32,9 +32,17 @@ def isSectType(item, kind=None):
         kind = list(SectTypes)
 
     if isinstance(kind, list):
-        return any([SectTypes[k](item) for k in kind])
+        for k in kind:
+            if isinstance(k, type):
+                k = k.__name__
+            if SectTypes[str(k)](item):
+                return True
+        return False
 
-    return SectTypes[kind](item)
+    if isinstance(kind, type):
+        kind = kind.__name__
+
+    return SectTypes[str(kind)](item)
 
 
 class BaseSect:
@@ -160,6 +168,11 @@ class BaseSect:
             new.__dict__[key] = copy.deepcopy(val, memo)
 
         return new
+
+
+    def __delattr__(self, key):
+        if key in self:
+            del self._data[key]
 
 
     def __delitem__(self, key):
@@ -1000,3 +1013,26 @@ class BaseSect:
             return not bool(errors.reduce())
 
         return errors
+
+
+    def isinstance(self, obj=Null, types=None):
+        """
+        Modified isinstance that works on Sect objects. If the input is a str,
+        retrieves that child key from this Sect
+
+        Parameters
+        ----------
+        obj : any
+            Object to check
+        types : type, list[type]
+            Types to check
+        """
+        if isinstance(obj, str):
+            obj = self[obj]
+        elif obj is Null:
+            obj = self
+
+        if hasattr(obj, '_data'):
+            obj = obj._data
+
+        return isinstance(obj, types)

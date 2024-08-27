@@ -209,7 +209,8 @@ def setDefaults(**kwargs):
         cmd = cmds.get(key)
         if cmd:
             if not isinstance(default, dict):
-                raise AttributeError(f'Setting defaults for a specific command must be a dict. Got type {type(default)}: {key!r}={default!r}')
+                # raise AttributeError(f'Setting defaults for a specific command must be a dict. Got type {type(default)}: {key!r}={default!r}')
+                default = {'default': default}
 
             # Retrieve the params for this command
             params = {param.name: param for param in cmd.params}
