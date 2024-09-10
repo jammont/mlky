@@ -184,8 +184,10 @@ class DictSect(BaseSect):
 
     def pop(self, key):
         if key in self._data:
-            return self._data.pop(key)
-        return Null
+            data = self[key]
+            del self._data[key]
+            return data
+        return self._NullOrNone()
 
 
     def patchCompatible(self, item):
