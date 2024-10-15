@@ -256,7 +256,7 @@ def between(var, lower, upper, inclusive=False):
 @register()
 def one_valid(items):
     """
-    Checks that one of the keys passes .validate()
+    Checks that one of the keys passes .validateObj()
 
     Parameters
     ----------
@@ -275,17 +275,16 @@ def one_valid(items):
     ov = False # One Valid
     for item in items:
         # Update the Var to ensure checks are properly done
-        item._skip_checks = False
-        item.strict = True
+        item._skipValidate = False
 
         # Check if it is valid, record True to OV if any one is
-        err = item.validate().reduce()
+        err = item.validateObj(strict=True).reduce()
         ov |= not err
 
     if ov:
         # All future checks should be skipped as one was valid
         for item in items:
-            item._skip_checks = True
+            item._skipValidate = True
         return True
 
     return f'At least one key must be valid and none are: {[k.name for k in items]}'

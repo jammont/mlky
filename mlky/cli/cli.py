@@ -155,7 +155,12 @@ def report(config, patch, defs, override, liststyle, debug, truncate):
 
     Config(config, _patch=patch, _defs=defs, _override=override, _debug=debug)
 
-    click.echo(Config.toYaml(listStyle=liststyle, truncate=truncate, comments=None))
+    if Config.isSectType(Config, 'var'):
+        click.echo('Failed to load config properly, please double check the input command')
+        click.echo('This loaded as a Var which may indicate the input file does not exist')
+        click.echo(f'Loaded as: {Config}')
+    else:
+        click.echo(Config.toYaml(listStyle=liststyle, truncate=truncate, comments=None))
 
     click.echo('-'*109)
 
@@ -209,7 +214,8 @@ def setDefaults(**kwargs):
         cmd = cmds.get(key)
         if cmd:
             if not isinstance(default, dict):
-                raise AttributeError(f'Setting defaults for a specific command must be a dict. Got type {type(default)}: {key!r}={default!r}')
+                # raise AttributeError(f'Setting defaults for a specific command must be a dict. Got type {type(default)}: {key!r}={default!r}')
+                default = {'default': default}
 
             # Retrieve the params for this command
             params = {param.name: param for param in cmd.params}

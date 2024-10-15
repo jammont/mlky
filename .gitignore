@@ -4,6 +4,7 @@ __pycache__
 
 # Dev files
 .local/
+test_module/
 
 # builds
 build/

@@ -1,9 +1,9 @@
 """
 """
+import glob
 import logging
 import os
 
-from glob    import glob
 from pathlib import Path
 
 import yaml
@@ -60,11 +60,13 @@ def load_from_str(string):
             data = yaml.safe_load(file)
 
     # glob wildcard
-    elif glob(string):
-        data = [load_from_str(file) for file in glob(string)]
+    elif glob.has_magic(string):
+        data = [load_from_str(file) for file in glob.glob(string)]
         if len(data) > 1:
             data = merge(data[0], *data[1:])
             Logger.debug('Merged files together')
+        elif not data:
+            Logger.error(f'No files were collected using the provided glob string: {string}')
 
     else:
         try:

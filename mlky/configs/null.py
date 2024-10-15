@@ -37,6 +37,22 @@ NullErrors.now = dtt.now()
 NullErrors.err = 0
 
 
+def debug(msg):
+    """
+    Utility function to quickly enable debug logging for this module
+
+    Parameters
+    ----------
+    msg : any
+        Message to print
+    """
+    if Null._debug:
+        if msg == 'exception':
+            Logger.exception('An exception was caught:')
+        else:
+            Logger.error(msg)
+
+
 def traceNull(frame):
     """
     Traces the source of the Null object in a given frame. Designed to only detect
@@ -50,24 +66,51 @@ def traceNull(frame):
     paths = []
     path  = ''
     obj   = None
+
+    line = '─'*64
+    debug(f'┌{line}')
     for instr in dis.Bytecode(frame.f_code):
+        debug('¦ ' + str(instr))
+    debug(f'└{line}')
+
+    debug(f'┌{line}')
+
+    for instr in dis.Bytecode(frame.f_code):
+        debug('¦    ' + str(instr))
+
         if instr.opname == 'LOAD_NAME':
             path = instr.argval
-            obj = frame.f_locals.get(path)
+            obj  = frame.f_locals.get(path)
+            debug(f'┌─ Loading local: {path}')
 
-        elif instr.opname in ('LOAD_ATTR', 'LOAD_METHOD'):
+        elif instr.opname == 'LOAD_GLOBAL':
+            path = instr.argval
+            obj  = frame.f_globals.get(path)
+            debug(f'┌─ Loading global: {path}')
+
+        elif instr.opname in ('LOAD_ATTR', 'LOAD_METHOD') and obj is not None:
             if obj is not Null:
                 path += f'.{instr.argval}'
-            obj = obj[instr.argval]
+            try:
+                obj = obj[instr.argval]
+            except:
+                obj = None
+            debug(f'├─ Loaded attr/method: {instr.argval}')
 
         elif instr.opname == 'CALL_METHOD' and obj is Null:
-            paths.append(path)
-
-        else:
+            # Null identified, reset working object
             obj = None
+            paths.append(path)
+            debug(f'└─ Call method, obj is null, appending path: {path}')
 
-    return paths
+        # else:
+        #     obj = None
+        #     debug('└─ Resetting obj to None')
 
+    debug(f'└{line}')
+
+    # Return the unique set to paths
+    return set(paths)
 
 def getContext():
     """
@@ -83,13 +126,15 @@ def getContext():
     info  = inspect.getframeinfo(frame)
     trace = traceNull(frame)
 
-    context = f'Context:\n  File "{info.filename}", line {info.lineno}, in {info.function}\n    {info.code_context[0].strip()}'
+    context = f'\n    {info.code_context[0].strip()}' if info.code_context else ''
+    context = f'Context:\n  File "{info.filename}", line {info.lineno}, in {info.function}{context}'
     if trace:
-        paths = trace[0]
         if len(trace) > 1:
             pad   = '\n    - '
             paths = pad.join(trace)
             paths = pad + paths
+        else:
+            paths = trace.pop()
 
         context += f'\n    Identified as Null: {paths}'
 
@@ -109,12 +154,14 @@ class NullType(type):
     Warnings can be disabled via:
     >>> Null._warn = False
     """
-    _warn = True
+    _warn  = True
+    _debug = False
 
     def __call__(cls, *args, **kwargs):
         try:
             context = getContext()
         except:
+            debug('exception')
             context = ''
 
         NullErrors(f'Null received a call like a function, was this intended? {context}', cls._warn)
@@ -143,7 +190,7 @@ class NullType(type):
         return iter({})
 
     def __setattr__(cls, key, value):
-        if key in ('_warn', '_raise'):
+        if key in ('_warn', '_debug'):
             super().__setattr__(key, value)
             return
 

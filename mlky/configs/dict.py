@@ -22,6 +22,16 @@ class DictSect(BaseSect):
 
     def _subinit(self, _data={}, _patch=None, **kwargs):
         """
+        Subclass initialization called within the BaseSect.__init__
+
+        Parameters
+        ----------
+        _data : dict, default={}
+            Data to initialize with
+        _patch : str, list[str], default=None
+            Patching to apply
+        **kwargs : dict
+            Any additional flags to set
         """
         for key, value in _data.items():
             # Skip reserved keys
@@ -172,9 +182,27 @@ class DictSect(BaseSect):
         return self.toDict(var).items()
 
 
+    def pop(self, key):
+        if key in self._data:
+            data = self[key]
+            del self._data[key]
+            return data
+        return self._NullOrNone()
+
+
     def patchCompatible(self, item):
         """
         Checks if another object is patch compatible with this object
+
+        Parameters
+        ----------
+        item : any
+            Object to check compatibility with
+
+        Returns
+        -------
+        bool
+            True if compatible, False otherwise
         """
         return isSectType(item, 'dict') or isinstance(item, dict)
 

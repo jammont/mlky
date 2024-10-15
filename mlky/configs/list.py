@@ -25,12 +25,14 @@ class ListSect(BaseSect):
 
     def _subinit(self, _data=[], **kwargs):
         """
-        Initializes the self._data object
+        Subclass initialization called within the BaseSect.__init__
 
         Parameters
         ----------
-        _data: list, default=[]
-            Initial list object
+        _data : dict, default=[]
+            Data to initialize with
+        **kwargs : dict
+            Any additional flags to set
         """
         for key, value in enumerate(_data):
             self._data.append(self._makeObj(key, value))
@@ -59,9 +61,9 @@ class ListSect(BaseSect):
 
         Parameters
         ----------
-        key: int or 'append'
+        key : int or 'append'
             If int, changes value at position, elif append then appends a new value
-        value: any
+        value : any
             Value to insert
         """
         if key == 'append':
@@ -111,7 +113,7 @@ class ListSect(BaseSect):
 
         Parameters
         ----------
-        value: any
+        value : any
             Object to append
         """
         obj = self._makeObj(len(self._data), value)
@@ -131,6 +133,8 @@ class ListSect(BaseSect):
 
         self._data = patch._data
 
+        self.updateChildren()
+
         self._log(0, 'applyPatch', f'Patching with: {patch}')
         return self
 
@@ -141,7 +145,7 @@ class ListSect(BaseSect):
 
         Parameters
         ----------
-        item: any
+        item : any
             Object to check compatibility with
 
         Returns
@@ -158,9 +162,9 @@ class ListSect(BaseSect):
 
         Parameters
         ----------
-        var: bool, default=False
+        var : bool, default=False
             Return Var objects instead of their held values
-        recursive: bool, default=False
+        recursive : bool, default=False
             Recursively convert children to their primitive types as well
 
         Returns
