@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Definitions - mlky</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/mkapi-common.css" rel="stylesheet" />
+        <link href="../css/mkapi-material.css" rel="stylesheet" />
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Definitions";
+        var mkdocs_page_input_path = "defs.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> mlky
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../usage/">Getting Started</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API</span></p>
+              <ul>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">mlky</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Definitions</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/jammont/mlky/edit/master/docs/defs.md">Edit on jammont/mlky</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="definitions">Definitions</h1>
+<p>Definition files (shorthand: <code>defs</code>) are structured YAML documents designed to guide a <code>Sect</code> (which <code>Config</code> is a subclass of) object in populating itself and enforcing validation rules.</p>
+<ol>
+<li>
+<p><strong>Population Process</strong>:
+   When processing a configuration input, a <code>Sect</code> object generates child keys (of type <code>Sect</code> or <code>Var</code>) based on the definitions provided in the <code>defs.yml</code>. If a key is missing in the input but defined in the <code>defs.yml</code>, it will be added with default values.</p>
+</li>
+<li>
+<p><strong>Rule Enforcement</strong>:
+   Rules specified in <code>defs.yml</code> are applied to the respective key objects within the <code>Sect</code>. For example, if a key like <code>A</code> is defined with a data type of <code>int</code>, attempting to assign any other data type to <code>A</code> will result in a validation failure triggered by <code>Sect.validate()</code>. Various types of rules, such as <code>isfile</code>, <code>isbetween(val1, val2)</code>, are supported, alongside the ability to incorporate custom rule functions, known as <code>checks</code>.</p>
+</li>
+</ol>
+<h2 id="how-to-construct">How to Construct</h2>
+<h3 id="root-level">Root Level</h3>
+<p><code>defs.yml</code> files are structured to start from the <em>root</em> level of the <code>Sect</code> object. In patch-less instantiations, the root level is the top level of the input. In patched instantiations, the root level is the next level down. For example:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">A</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
+<span class="nt">B</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">n</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
+</code></pre></div>
+<p>The above input config patch-less <code>Sect(config)</code> will produce:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">A</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
+<span class="nt">B</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">n</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
+</code></pre></div>
+<p>The root level in this case is <code>A, B</code>, so the <code>defs</code> should start with defining these keys.</p>
+<p>Whereas using a patch <code>Sect(data=config, patch="A&lt;-B")</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">m</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
+<span class="nt">n</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
+</code></pre></div>
+<p>The root is <code>m, n</code>, and as such <code>defs</code> will start with these instead.</p>
+<h3 id="keys">Keys</h3>
+<p>A key of the config starts with a period <code>.</code> followed by the name of the key. Definition options do not start with a period <code>.</code>.</p>
+<p>Assume this is a <code>defs.yml</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">.train</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">abc</span>
+<span class="nt">.test</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xyz</span>
+</code></pre></div>
+<p>And a potential <code>config.yml</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">default</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">train</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ijk</span>
+
+<span class="nt">mno</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mno</span>
+
+<span class="nt">uvw</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uvw</span>
+
+<span class="nt">override</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">train</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">\</span>
+</code></pre></div>
+<p>Possible instantiations:</p>
+<ul>
+<li>
+<p>Use only the <code>default</code> section, pulling the <code>train</code> from the <code>defs</code>
+  <div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">Sect</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="s1">&#39;config.yml&#39;</span><span class="p">,</span> <span class="n">defs</span><span class="o">=</span><span class="s1">&#39;defs.yml&#39;</span><span class="p">,</span> <span class="n">patch</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">])</span>
+</code></pre></div>
+  <div class="highlight"><pre><span></span><code><span class="nt">train</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ijk</span>
+<span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xyz</span>
+</code></pre></div></p>
+</li>
+<li>
+<p>Patch section <code>mno</code> onto <code>default</code>, aka <code>default&lt;-mno</code>
+  <div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">Sect</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="s1">&#39;config.yml&#39;</span><span class="p">,</span> <span class="n">defs</span><span class="o">=</span><span class="s1">&#39;defs.yml&#39;</span><span class="p">,</span> <span class="n">patch</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">,</span> <span class="s1">&#39;mno&#39;</span><span class="p">])</span>
+</code></pre></div>
+  <div class="highlight"><pre><span></span><code><span class="nt">train</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ijk</span>
+<span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mno</span>
+</code></pre></div></p>
+</li>
+<li>
+<p>Use the default value of <code>train</code> as set by the <code>defs</code> instead of the <code>default</code> section
+  <div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">Sect</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="s1">&#39;config.yml&#39;</span><span class="p">,</span> <span class="n">defs</span><span class="o">=</span><span class="s1">&#39;defs.yml&#39;</span><span class="p">,</span> <span class="n">patch</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;default&#39;</span><span class="p">,</span> <span class="s1">&#39;override&#39;</span><span class="p">])</span>
+</code></pre></div>
+  <div class="highlight"><pre><span></span><code><span class="nt">train</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">abc</span>
+<span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xyz</span>
+</code></pre></div></p>
+</li>
+<li>
+<p>Now patch the <code>test</code> key with the <code>uvw</code> section but use the default value of <code>train</code> from <code>defs</code>
+  <div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">Sect</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="s1">&#39;config.yml&#39;</span><span class="p">,</span> <span class="n">defs</span><span class="o">=</span><span class="s1">&#39;defs.yml&#39;</span><span class="p">,</span> <span class="n">patch</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;override&#39;</span><span class="p">,</span> <span class="s1">&#39;uvw&#39;</span><span class="p">])</span>
+</code></pre></div>
+  <div class="highlight"><pre><span></span><code><span class="nt">train</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">abc</span>
+<span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uvw</span>
+</code></pre></div></p>
+</li>
+</ul>
+<h3 id="var-keys">Var keys</h3>
+<p><code>Var</code> are container objects for keys that are any type other than <code>dict</code> or <code>list</code> (unless <code>Sect._opts.convertListTypes</code> is set to <code>False</code>).</p>
+<p>The options for a Var key are as follows:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dtype</td>
+<td>The expected data type. This can either be a single type or a list of types</td>
+<td><code>dtype: int</code><br><code>dtype: [str, int]</code></td>
+</tr>
+<tr>
+<td>sdesc</td>
+<td>Short description for the key</td>
+<td><code>sdesc: This describes what the key is for</code></td>
+</tr>
+<tr>
+<td>ldesc</td>
+<td>Long description for the key</td>
+<td><code>ldesc: This is to be an extra long description</code></td>
+</tr>
+<tr>
+<td>default</td>
+<td>Default value to set when not provided. Omit to default to <code>Null</code></td>
+<td><code>default: 1</code><br><code>default: abc</code></td>
+</tr>
+<tr>
+<td>required</td>
+<td>Boolean setting this key to be required to be set by the user manually</td>
+<td><code>required: true</code><br><code>required: false</code></td>
+</tr>
+<tr>
+<td>checks</td>
+<td>Registered checks to apply to the key</td>
+<td>See the <a href="#var-checks">checks</a> section for more information and examples</td>
+</tr>
+<tr>
+<td>items</td>
+<td>When the Var is a list type with dict items, this sets the definition for each child</td>
+<td>See the <a href="#var-items">items</a> section for more information and examples</td>
+</tr>
+<tr>
+<td>subtypes</td>
+<td></td>
+<td>See the <a href="#var-subtypes">items</a> section for more information and examples</td>
+</tr>
+</tbody>
+</table>
+<h3 id="var-items">Var Items</h3>
+<h3 id="var-subtypes">Var Subtypes</h3>
+<p><code>subtypes</code> is a special option for Vars that define different types for a given key.</p>
+<h3 id="sect-keys">Sect keys</h3>
+<p><code>Sect</code> objects can either be explicitly or implicitly defined. To do so explicitly, set <code>dtype: dict</code>. Implicitly, if any child key is detected (by checking if any subkey starts with a period), then the dtype is set automatically.</p>
+<div class="highlight"><pre><span></span><code>.model:
+  .kind:
+    dtype: str
+    default: RandomForestRegressor
+  .params:
+    dtype: dict
+</code></pre></div>
+<p>The above will be detected to be a <code>Sect</code> on creation.</p>
+<h3 id="rules-checks">Rules / Checks</h3>
+<p>Rules applied via the <code>defs</code> are known as <code>checks</code>. They are executed when the <code>.validate()</code> function is called on either a <code>Sect</code> or <code>Var</code> object.</p>
+<h3 id="var-checks">Var Checks</h3>
+<p>...</p>
+<h3 id="sect-checks">Sect Checks</h3>
+              
+            </div>
+          </div><footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/jammont/mlky" class="fa fa-code-fork" style="color: #fcfcfc"> jammont/mlky</a>
+        </span>
+    
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascript/mkapi.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
