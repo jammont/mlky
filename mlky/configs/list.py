@@ -20,7 +20,10 @@ class ListSect(BaseSect):
     _data   = []
 
     # When patching perform via append instead of replacing
-    _patchAppend = False # NYI
+    _patchAppend    = False # NYI
+
+    # Raise AttributeError when value of getattr(value) is not an int
+    _raiseOnNotInts = True
 
 
     def _subinit(self, _data=[], **kwargs):
@@ -43,6 +46,13 @@ class ListSect(BaseSect):
         for item in other:
             self.append(item)
         return self
+
+
+    def __getattr__(self, key):
+        if self._raiseOnNotInts and not isinstance(key, int):
+            raise AttributeError
+
+        return super().__getattr__(key)
 
 
     def __iadd__(self, other):
