@@ -123,12 +123,12 @@ def simpleTable(iterable, enum=False, delimiter='=', offset=1, prepend='', print
         The print function to use. Allows using custom function instead of Python's normal print
     """
     if hasattr(iterable, 'items'):
-        pad   = len(max(iterable.keys(), key=len))
+        pad   = len(max(iterable.keys(), key=lambda v: len(str(v))))
         items = iterable.items()
     else:
         assert len(iterable) > 0, 'Iterable must not be empty'
         assert all([len(item) == 2 for item in iterable]), 'Iterable must contain iterables of length 2'
-        pad   = len(max(iterable, key=lambda v: len(v[0])))
+        pad   = len(max(iterable, key=lambda v: len(str(v[0]))))
         items = iterable
 
     # Determine how much padding between the key and delimiter

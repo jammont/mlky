@@ -69,7 +69,8 @@ class BaseSect:
     _patch = None
 
     # ListSect flags
-    _patchAppend = False
+    _patchAppend    = False
+    _raiseOnNotInts = True
 
     # Var flags
     _coerce         = True
@@ -464,6 +465,7 @@ class BaseSect:
             _nulls          = self._nulls,
             # List
             _patchAppend    = self._patchAppend,
+            _raiseOnNotInts = self._raiseOnNotInts,
             # Var
             _debug          = self._debug,
             _labels         = self._labels,
