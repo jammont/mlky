@@ -1,4 +1,50 @@
-# python -m build --wheel # May need to install build
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+license-files = []
+
+[tool.setuptools.packages.find]
+include = ["mlky"]
+
+[project]
+name = "mlky"
+version = "4.2.4"
+description = "Flexible Configurations: Because it's the only Way"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {file = "LICENSE"}
+keywords = ["mlky", "config"]
+authors = [
+  {name = "James Montgomery", email = "J.Montgomery@jpl.nasa.gov"}
+]
+maintainers = [
+  {name = "James Montgomery", email = "J.Montgomery@jpl.nasa.gov"}
+]
+classifiers = [
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+  "click",
+  "PyYAML",
+]
+
+[project.optional-dependencies]
+docs = [
+  "mkdocs",
+  "mkapi",
+  "mkdocstrings[python]",
+  "pytkdocs[numpy-style]",
+]
+
+[project.urls]
+repository = "https://github.com/jammont/mlky"
+documentation = "https://jammont.github.io/mlky/"
+
+[project.scripts]
+mlky = "mlky:cli.cli.commands"
