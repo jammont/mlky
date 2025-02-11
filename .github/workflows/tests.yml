@@ -40,17 +40,17 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
-          pip install --upgrade pip build twine
+          pip install --upgrade pip build
 
       - name: Build package
         shell: bash
         run: |
-          build --wheel
+          python -m build --sdist --wheel
 
       - name: Install tarball
         shell: bash
         run: |
-          pip install dist/*.whl
+          pip install dist/*.gz
 
       - name: Test installation
         shell: bash
