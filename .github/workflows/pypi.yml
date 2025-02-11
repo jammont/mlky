@@ -9,15 +9,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install dependencies
         shell: bash
         run: |
-          pip install --upgrade pip build twine
-      - name: Build and publish
+          pip install --upgrade pip build
+
+      - name: Build package
+        shell: bash
+        run: |
+          python -m build --sdist --wheel
+
+      - name: Publish
         shell: bash
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          python -m build --sdist --wheel
           twine upload dist/*
