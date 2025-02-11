@@ -1,0 +1,3 @@
+mkdocstrings[python]
+pytkdocs[numpy-style]
+mkapi

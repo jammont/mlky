@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Getting Started - mlky</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../css/mkapi-common.css" rel="stylesheet" />
+        <link href="../css/mkapi-material.css" rel="stylesheet" />
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Getting Started";
+        var mkdocs_page_input_path = "usage.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> mlky
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Getting Started</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#quick-overview">Quick Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#detailed-walkthrough">Detailed Walkthrough</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API</span></p>
+              <ul>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">mlky</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Getting Started</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/jammont/mlky/edit/master/docs/usage.md">Edit on jammont/mlky</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="getting-started">Getting Started</h1>
+<p>mlky is recommended to be installed via pip at this time.</p>
+<h2 id="installation">Installation</h2>
+<p>You can install mlky using pip:</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>mlky
+</code></pre></div>
+<p>Or via Conda:</p>
+<div class="highlight"><pre><span></span><code>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>jammont<span class="w"> </span>mlky
+</code></pre></div>
+<h2 id="quick-overview">Quick Overview</h2>
+<p>To get started with mlky, import the <code>Config</code> object and pass it either a yaml file, yaml string, or a dict:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span> <span class="nn">mlky</span> <span class="kn">import</span> <span class="n">Config</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="c1"># Empty initially</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">Config</span>
+<span class="n">D</span><span class="p">{}</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="c1"># Now initialized</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">Config</span><span class="p">({</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span> <span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;d&#39;</span><span class="p">,</span> <span class="s1">&#39;e&#39;</span><span class="p">]})</span>
+<span class="n">D</span><span class="p">{</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="n">D</span><span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">V</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="n">V</span><span class="o">=</span><span class="mi">2</span><span class="p">},</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="n">D</span><span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">V</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="n">V</span><span class="o">=</span><span class="mi">3</span><span class="p">},</span> <span class="s1">&#39;C&#39;</span><span class="p">:</span> <span class="n">L</span><span class="p">[</span><span class="n">V</span><span class="o">=</span><span class="s1">&#39;d&#39;</span><span class="p">,</span> <span class="n">V</span><span class="o">=</span><span class="s1">&#39;e&#39;</span><span class="p">]}</span>
+</code></pre></div>
+<p>The object uses tags to represent what each part is:</p>
+<ul>
+<li><code>D{...}</code> for <code>dict</code> objects</li>
+<li><code>L[...]</code> for <code>list</code> objects</li>
+<li><code>V=...</code>  for variable objects</li>
+</ul>
+<p>These can be accessed by either dot and dict notation:</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">Config</span><span class="o">.</span><span class="n">A</span>
+<span class="n">D</span><span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">V</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="n">V</span><span class="o">=</span><span class="mi">2</span><span class="p">}</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">Config</span><span class="p">[</span><span class="s1">&#39;B&#39;</span><span class="p">]</span>
+<span class="n">D</span><span class="p">{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="n">V</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="n">V</span><span class="o">=</span><span class="mi">3</span><span class="p">}</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">Config</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">a</span>
+<span class="mi">1</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">Config</span><span class="p">[</span><span class="s1">&#39;B&#39;</span><span class="p">][</span><span class="s1">&#39;a&#39;</span><span class="p">]</span>
+<span class="mi">0</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">Config</span><span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">b</span>
+<span class="mi">2</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">Config</span><span class="o">.</span><span class="n">B</span><span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">]</span>
+<span class="mi">3</span>
+</code></pre></div>
+<p>The <code>Config</code> object is also a singleton, though copies can be created to create local versions:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">set_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">copy</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">deepCopy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">Config</span><span class="p">()</span>
+
+    <span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+<span class="k">def</span> <span class="nf">get_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">copy</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">deepCopy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">Config</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">set_param</span><span class="p">(</span><span class="s1">&#39;persist&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span> <span class="c1"># Global</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">get_param</span><span class="p">(</span><span class="s1">&#39;persist&#39;</span><span class="p">)</span> <span class="c1"># Global</span>
+<span class="kc">True</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">set_param</span><span class="p">(</span><span class="s1">&#39;local&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">get_param</span><span class="p">(</span><span class="s1">&#39;local&#39;</span><span class="p">)</span>
+<span class="n">Null</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">get_param</span><span class="p">(</span><span class="s1">&#39;persist&#39;</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># Copies global instance</span>
+<span class="kc">True</span>
+</code></pre></div>
+<p>Because it is a singleton, you can also use <code>Config</code> directly instead of a variable as well as use the object across the Python instance:</p>
+<p><div class="highlight"><pre><span></span><code><span class="c1"># Script 1</span>
+<span class="kn">from</span> <span class="nn">mlky</span> <span class="kn">import</span> <span class="n">Config</span>
+
+<span class="n">Config</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># initialize somewhere</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># Script 2</span>
+<span class="kn">from</span> <span class="nn">mlky</span> <span class="kn">import</span> <span class="n">Config</span>
+
+<span class="k">assert</span> <span class="n">Config</span><span class="o">.</span><span class="n">a</span> <span class="o">==</span> <span class="mi">1</span>
+<span class="k">assert</span> <span class="n">Config</span><span class="o">.</span><span class="n">b</span> <span class="o">==</span> <span class="mi">2</span>
+</code></pre></div></p>
+<p>Ideally you would want to initialize the <code>Config</code> object at the beginning and then leverage the global instance:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">mlky</span> <span class="kn">import</span> <span class="n">Config</span>
+
+<span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">Config</span><span class="o">.</span><span class="n">param</span><span class="p">:</span>
+    <span class="o">...</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+  <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">Config</span><span class="o">.</span><span class="n">process</span><span class="p">:</span>
+    <span class="n">process</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">Config</span><span class="p">(</span><span class="s1">&#39;/some/config.yaml&#39;</span><span class="p">)</span>
+  <span class="n">main</span><span class="p">()</span>
+</code></pre></div>
+<h2 id="detailed-walkthrough">Detailed Walkthrough</h2>
+<p>The following will be used as an example:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+
+<span class="kn">from</span> <span class="nn">mlky</span> <span class="kn">import</span> <span class="n">Config</span>
+
+<span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+      <span class="n">lines</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">Config</span><span class="o">.</span><span class="n">skip_header</span><span class="p">:</span>
+      <span class="n">lines</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">Config</span><span class="o">.</span><span class="n">header</span><span class="p">:]</span>
+
+    <span class="o">...</span> <span class="c1"># Some arbitrary other processing code</span>
+
+    <span class="k">if</span> <span class="n">Config</span><span class="o">.</span><span class="n">output</span><span class="p">:</span>
+      <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">Config</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">file</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-c&#39;</span><span class="p">,</span> <span class="s1">&#39;--config&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="s1">&#39;--patch&#39;</span><span class="p">)</span>
+  <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+  <span class="n">Config</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">patch</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">):</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">Config</span><span class="o">.</span><span class="n">input</span><span class="si">}</span><span class="s1">/*&#39;</span><span class="p">)</span>
+    <span class="n">process</span><span class="p">(</span><span class="n">files</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: No input provided!&#39;</span><span class="p">)</span>
+</code></pre></div>
+<p>Command: <code>python script.py -c /some/config.yml -p "sect1&lt;-sect2"</code></p>
+<p>Calling the script with the above command will step through:</p>
+<ol>
+<li>Initialize the global <code>Config</code> instance with the file and patch provided
+    a. That is, <code>sect1</code> in the <code>config.yml</code> will be patched with <code>sect2</code></li>
+<li>Check if <code>Config.input</code> exists
+    a. If it is in the Config, return it as-is. If it is not, this will be a <code>Null</code> value which evaluates to <code>False</code></li>
+<li>Use the value at <code>Config.input</code> to glob some directory</li>
+<li>Process the collected files</li>
+<li>For each file, read in the data</li>
+<li>If <code>Config.skip_header</code> is defined, use the (expected to be an int) value of <code>Config.header</code>
+    a. It is on the user to ensure proper safeguards are inplace.<br>
+    b. Multiple possible safeguards include:<ol>
+<li><code>int(Config.header)</code> to raise an exception if the value cannot be casted to an integer</li>
+<li><code>Config.get('header', 5)</code> to use a default value if this key is not in the config</li>
+<li>A definitions file to ensure this key is an int (safest)</li>
+</ol>
+</li>
+<li>Check if <code>Config.output</code> is defined, which is expected to be a Sect</li>
+<li>Append write data to <code>Config.output.file</code></li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/jammont/mlky" class="fa fa-code-fork" style="color: #fcfcfc"> jammont/mlky</a>
+        </span>
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../javascript/mkapi.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
