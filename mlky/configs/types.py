@@ -122,6 +122,10 @@ class Path(metaclass=Types):
 
         return cls.dtype(str(value))
 
+    @classmethod
+    def yaml(cls, value):
+        return Types.yaml(cls, str(value))
+
 
 # Define what keys would match to which dtype class
 dtypes = {
