@@ -3,6 +3,8 @@ Data types module
 """
 import pathlib
 
+import yaml
+
 from .null import Null
 
 
@@ -42,7 +44,11 @@ class Types(type):
         if value is Null:
             return '\\'
 
-        return str(value)
+        # Leverage yaml to ensure values are safe to write
+        safe = yaml.safe_dump(value).strip()
+        safe = safe.replace("\n...", "")
+
+        return safe
 
 
 class Any(metaclass=Types):
@@ -113,7 +119,7 @@ class Path(metaclass=Types):
     def cast(cls, value):
         if value is Null:
             return value
-        
+
         return cls.dtype(str(value))
 
 
